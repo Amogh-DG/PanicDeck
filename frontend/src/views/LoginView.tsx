@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStudy } from '../context/StudyContext';
-import { CheckCircle, ArrowRight, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -14,7 +14,6 @@ const isValidGoogleClientId = (id: string): boolean => {
 
 export const LoginView: React.FC = () => {
   const { loginWithGoogle, setCurrentView } = useStudy();
-  const googleBtnRef = useRef<HTMLDivElement>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const tokenClientRef = useRef<google.accounts.oauth2.TokenClient | null>(null);
@@ -22,95 +21,120 @@ export const LoginView: React.FC = () => {
   const hasValidClientId = isValidGoogleClientId(GOOGLE_CLIENT_ID);
 
   useEffect(() => {
-    // Only initialize Google Identity Services if a valid OAuth 2.0 Client ID is provided
-    if (typeof window !== 'undefined' && window.google?.accounts?.id && hasValidClientId) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: (res: { credential: string }) => {
-            if (res.credential) {
-              loginWithGoogle(res.credential);
-            }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
+    let intervalId: any;
+    let attempts = 0;
 
-        if (googleBtnRef.current) {
-          window.google.accounts.id.renderButton(googleBtnRef.current, {
-            theme: 'filled_black',
-            size: 'large',
-            text: 'signin_with',
-            shape: 'rectangular',
-            width: '100%'
-          });
-        }
-      } catch (err) {
-        console.warn('Google GSI initialization notice:', err);
-      }
-    }
+    const setupGoogleAuth = () => {
+      if (!hasValidClientId) return;
 
-    // Initialize OAuth2 Token Client for popup account chooser if valid Client ID
-    if (typeof window !== 'undefined' && window.google?.accounts?.oauth2 && hasValidClientId) {
-      try {
-        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: 'email profile openid',
-          callback: async (tokenResponse: google.accounts.oauth2.TokenResponse) => {
-            if (tokenResponse.error) {
-              setAuthError(tokenResponse.error_description || tokenResponse.error);
-              setIsAuthenticating(false);
-              return;
-            }
-
-            if (tokenResponse.access_token) {
-              try {
-                setIsAuthenticating(true);
-                const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: {
-                    Authorization: `Bearer ${tokenResponse.access_token}`
-                  }
-                });
-
-                if (userInfoRes.ok) {
-                  const info = await userInfoRes.json();
-                  const verifiedJwt = `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.${btoa(
-                    JSON.stringify({
-                      sub: info.sub,
-                      email: info.email,
-                      name: info.name,
-                      picture: info.picture,
-                      email_verified: info.email_verified
-                    })
-                  )}.verified_signature`;
-
-                  loginWithGoogle(verifiedJwt, {
-                    sub: info.sub,
-                    email: info.email,
-                    name: info.name,
-                    picture: info.picture,
-                    token: tokenResponse.access_token
-                  });
-                } else {
-                  loginWithGoogle(tokenResponse.access_token);
+      if (typeof window !== 'undefined' && window.google?.accounts) {
+        // Initialize Google One Tap / Sign In
+        if (window.google.accounts.id) {
+          try {
+            window.google.accounts.id.initialize({
+              client_id: GOOGLE_CLIENT_ID,
+              callback: (res: { credential: string }) => {
+                if (res.credential) {
+                  loginWithGoogle(res.credential);
                 }
-              } catch (e) {
-                console.error('Error fetching Google profile:', e);
-                loginWithGoogle(tokenResponse.access_token);
-              } finally {
+              },
+              auto_select: false,
+              cancel_on_tap_outside: true
+            });
+          } catch (err) {
+            console.warn('Google GSI initialization notice:', err);
+          }
+        }
+
+        // Initialize OAuth2 Token Client for popup account chooser
+        if (window.google.accounts.oauth2) {
+          try {
+            tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+              client_id: GOOGLE_CLIENT_ID,
+              scope: 'email profile openid',
+              callback: async (tokenResponse: google.accounts.oauth2.TokenResponse) => {
+                if (tokenResponse.error) {
+                  let msg = tokenResponse.error_description || tokenResponse.error;
+                  if (tokenResponse.error === 'access_denied') {
+                    msg = 'Access denied. If your Google Cloud app is in "Testing" mode, ensure your email is added under "Test Users".';
+                  } else if (tokenResponse.error === 'popup_closed_by_user') {
+                    msg = 'Sign-in popup was closed before completing authentication.';
+                  }
+                  setAuthError(msg);
+                  setIsAuthenticating(false);
+                  return;
+                }
+
+                if (tokenResponse.access_token) {
+                  try {
+                    setIsAuthenticating(true);
+                    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                      headers: {
+                        Authorization: `Bearer ${tokenResponse.access_token}`
+                      }
+                    });
+
+                    if (userInfoRes.ok) {
+                      const info = await userInfoRes.json();
+                      const verifiedJwt = `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.${btoa(
+                        JSON.stringify({
+                          sub: info.sub,
+                          email: info.email,
+                          name: info.name,
+                          picture: info.picture,
+                          email_verified: info.email_verified
+                        })
+                      )}.verified_signature`;
+
+                      loginWithGoogle(verifiedJwt, {
+                        sub: info.sub,
+                        email: info.email,
+                        name: info.name,
+                        picture: info.picture,
+                        token: tokenResponse.access_token
+                      });
+                    } else {
+                      loginWithGoogle(tokenResponse.access_token);
+                    }
+                  } catch (e) {
+                    console.error('Error fetching Google profile:', e);
+                    loginWithGoogle(tokenResponse.access_token);
+                  } finally {
+                    setIsAuthenticating(false);
+                  }
+                }
+              },
+              error_callback: (err: any) => {
+                let msg = err?.message || 'Google OAuth error';
+                if (typeof msg === 'string' && msg.includes('origin')) {
+                  msg = 'Origin mismatch: Ensure http://localhost:5173 is added to "Authorized JavaScript origins" in Google Cloud Console.';
+                }
+                setAuthError(msg);
                 setIsAuthenticating(false);
               }
-            }
-          },
-          error_callback: (err) => {
-            console.warn('Google OAuth popup error:', err);
-            setIsAuthenticating(false);
+            });
+          } catch (err) {
+            console.warn('OAuth2 TokenClient init notice:', err);
           }
-        });
-      } catch (err) {
-        console.warn('OAuth2 TokenClient init notice:', err);
+        }
+
+        if (intervalId) clearInterval(intervalId);
       }
+    };
+
+    setupGoogleAuth();
+
+    if (hasValidClientId && (!window.google?.accounts?.id || !window.google?.accounts?.oauth2)) {
+      intervalId = setInterval(() => {
+        attempts += 1;
+        setupGoogleAuth();
+        if (attempts > 20 && intervalId) clearInterval(intervalId);
+      }, 300);
     }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [loginWithGoogle, hasValidClientId]);
 
   const handleManualGoogleAuth = () => {
@@ -122,7 +146,11 @@ export const LoginView: React.FC = () => {
         setIsAuthenticating(true);
         tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
         return;
-      } catch (_) {}
+      } catch (e: any) {
+        setAuthError(e?.message || 'Failed to open Google sign-in popup.');
+        setIsAuthenticating(false);
+        return;
+      }
     }
 
     // If GSI prompt is available with valid Client ID, launch One Tap
@@ -248,10 +276,6 @@ export const LoginView: React.FC = () => {
               )}
 
               <div className="space-y-3">
-                {GOOGLE_CLIENT_ID && (
-                  <div ref={googleBtnRef} className="w-full flex justify-center min-h-[40px]"></div>
-                )}
-
                 <button
                   onClick={handleManualGoogleAuth}
                   disabled={isAuthenticating}
@@ -282,7 +306,7 @@ export const LoginView: React.FC = () => {
                           d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                         />
                       </svg>
-                      <span>Sign in via Institutional Google</span>
+                      <span>Sign in with Google</span>
                     </>
                   )}
                 </button>
@@ -294,11 +318,6 @@ export const LoginView: React.FC = () => {
                   <span>Inspect Tripos Ledger Directive</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
-              </div>
-
-              <div className="pt-2 border-t border-surface-variant flex items-center gap-2 font-code-sm text-[11px] text-secondary">
-                <CheckCircle className="w-3.5 h-3.5 text-secondary" />
-                <span>Access verified. Google OAuth 2.0 &amp; S3 session secured.</span>
               </div>
             </div>
           </section>
