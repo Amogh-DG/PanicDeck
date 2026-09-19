@@ -75,9 +75,44 @@ export interface WeakTopic {
   severity: Severity;
 }
 
+export interface QuizScoreSummary {
+  total_questions: number;
+  correct_count: number;
+  overall_accuracy: number;
+}
+
+export interface TopicAccuracyBreakdown {
+  topic_id: string;
+  name: string;
+  total: number;
+  correct: number;
+  accuracy: number;
+}
+
 export interface WeakTopicsResponse {
   status: 'success';
+  quiz_id?: string;
+  score?: QuizScoreSummary;
+  topic_breakdown?: TopicAccuracyBreakdown[];
   weak_topics: WeakTopic[];
+}
+
+// DynamoDB Stored Quiz Score Item (lambdas/get_scores)
+export interface StoredQuizScore {
+  user_id: string;
+  timestamp_quiz_id: string;
+  quiz_id: string;
+  total_questions: number;
+  correct_count: number;
+  overall_accuracy: number;
+  topic_breakdown?: TopicAccuracyBreakdown[];
+  weak_topics?: WeakTopic[];
+  created_at: string;
+}
+
+export interface GetScoresResponse {
+  status: 'success';
+  scores: StoredQuizScore[];
 }
 
 // 3.4 coverage_gaps

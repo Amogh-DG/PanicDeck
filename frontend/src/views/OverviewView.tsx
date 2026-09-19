@@ -21,8 +21,19 @@ export const OverviewView: React.FC = () => {
     weakTopics,
     coverageGaps,
     uploadedFiles,
+    scoreHistory,
     handleLoadQuiz
   } = useStudy();
+
+  const latestScore = scoreHistory && scoreHistory.length > 0 ? scoreHistory[0] : null;
+  const calculatedAccuracy =
+    scoreHistory && scoreHistory.length > 0
+      ? Math.round(
+          (scoreHistory.reduce((acc, s) => acc + Number(s.overall_accuracy || 0), 0) /
+            scoreHistory.length) *
+            10
+        ) / 10
+      : 81.4;
 
   const handleStartQuiz = async () => {
     await handleLoadQuiz();
@@ -118,16 +129,23 @@ export const OverviewView: React.FC = () => {
           >
             <div className="flex items-center justify-between font-label-sm text-xs text-tertiary">
               <span>Quiz Accuracy</span>
-              <span className="font-code-sm text-secondary font-bold">+4.2% today</span>
+              <span className="font-code-sm text-secondary font-bold">
+                {latestScore ? `${scoreHistory.length} drills logged` : '+4.2% today'}
+              </span>
             </div>
             <div className="font-headline-lg text-headline-lg text-on-surface font-semibold">
-              81.4%
+              {calculatedAccuracy}%
             </div>
             <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
-              <div className="h-full bg-secondary rounded-full" style={{ width: '81.4%' }}></div>
+              <div
+                className="h-full bg-secondary rounded-full"
+                style={{ width: `${Math.min(100, calculatedAccuracy)}%` }}
+              ></div>
             </div>
             <div className="font-body-sm text-[11px] text-tertiary flex items-center justify-between">
-              <span>First-pass active recall</span>
+              <span>
+                {latestScore ? `Latest: ${latestScore.correct_count}/${latestScore.total_questions} correct` : 'First-pass active recall'}
+              </span>
               <span className="text-secondary font-medium">Launch Drill →</span>
             </div>
           </div>

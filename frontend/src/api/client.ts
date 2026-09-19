@@ -11,7 +11,9 @@ import {
   PastPaperWeightingResponse,
   UploadUrlResponse,
   DownloadUrlResponse,
-  ListFilesResponse
+  ListFilesResponse,
+  GetScoresResponse,
+  StoredQuizScore
 } from './types';
 import {
   INITIAL_TOPICS,
@@ -236,6 +238,19 @@ class ApiClient {
     return {
       status: 'success',
       download_url: ''
+    };
+  }
+
+  async getScores(limit = 20): Promise<GetScoresResponse> {
+    if (this.baseUrl) {
+      return this.request<GetScoresResponse>('/get-scores', {
+        method: 'POST',
+        body: JSON.stringify({ limit })
+      });
+    }
+    return {
+      status: 'success',
+      scores: []
     };
   }
 }

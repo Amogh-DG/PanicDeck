@@ -6,7 +6,8 @@ import {
   CoverageGap,
   WeightedTopic,
   UserProfile,
-  FileItem
+  FileItem,
+  StoredQuizScore
 } from '../api/types';
 import {
   INITIAL_TOPICS,
@@ -56,6 +57,7 @@ interface StudyContextType {
   coverageGaps: CoverageGap[];
   weightedTopics: WeightedTopic[];
   uploadedFiles: UploadedFileRecord[];
+  scoreHistory: StoredQuizScore[];
 
   isLoading: boolean;
   loadingStep: string;
@@ -70,6 +72,7 @@ interface StudyContextType {
   handleUploadSyllabus: (file: File) => Promise<void>;
   handleUploadPastPapers: (files: File[]) => Promise<void>;
   refreshFiles: () => Promise<void>;
+  refreshScores: () => Promise<void>;
 }
 
 const StudyContext = createContext<StudyContextType | undefined>(undefined);
@@ -136,6 +139,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [coverageGaps, setCoverageGaps] = useState<CoverageGap[]>(INITIAL_COVERAGE_GAPS);
   const [weightedTopics, setWeightedTopics] = useState<WeightedTopic[]>(INITIAL_WEIGHTED_TOPICS);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileRecord[]>([]);
+  const [scoreHistory, setScoreHistory] = useState<StoredQuizScore[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<string>('');
@@ -172,6 +176,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('panicdesk_user', JSON.stringify(profile));
     setCurrentView('overview');
     refreshFiles();
+    refreshScores();
   };
 
   const logout = () => {
@@ -200,9 +205,19 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (_) {}
   };
 
+  const refreshScores = async () => {
+    try {
+      const res = await api.getScores(20);
+      if (res.status === 'success' && res.scores) {
+        setScoreHistory(res.scores);
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     if (isLoggedIn) {
       refreshFiles();
+      refreshScores();
     }
   }, [isLoggedIn]);
 
@@ -306,6 +321,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (weakRes.status === 'success') {
         setWeakTopics(weakRes.weak_topics);
       }
+      await refreshScores();
     } catch (e: any) {
       setError(e.message || 'Failed to submit quiz');
     } finally {
@@ -387,6 +403,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         coverageGaps,
         weightedTopics,
         uploadedFiles,
+        scoreHistory,
         isLoading,
         loadingStep,
         error,
@@ -398,7 +415,8 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         handleResetQuiz,
         handleUploadSyllabus,
         handleUploadPastPapers,
-        refreshFiles
+        refreshFiles,
+        refreshScores
       }}
     >
       {children}
