@@ -31,9 +31,10 @@ test_flow.py
 PRD_person_a_backend.md
 API_CONTRACT.md
 requirements.txt
+PRD_person_b_frontend.md
 node_modules/
 **/node_modules/
 dist/
 **/dist/
 .agents/
-.gemini/
+.gemini/
