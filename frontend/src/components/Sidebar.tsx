@@ -75,7 +75,7 @@ export const Sidebar: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-headline-md text-headline-md text-on-surface font-normal">
-                PanicDesk<span className="text-primary italic">.</span>
+                PanicDeck<span className="text-primary italic">.</span>
               </span>
             </div>
             <div className="font-label-sm text-[10px] text-tertiary tracking-widest uppercase -mt-1">

@@ -7,8 +7,8 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 const isValidGoogleClientId = (id: string): boolean => {
   return Boolean(
     id &&
-      (id.includes('.apps.googleusercontent.com') ||
-        id.includes('.googleusercontent.com'))
+    (id.includes('.apps.googleusercontent.com') ||
+      id.includes('.googleusercontent.com'))
   );
 };
 
@@ -170,7 +170,7 @@ export const LoginView: React.FC = () => {
           }
         });
         return;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Instant authenticated scholar session
@@ -191,7 +191,7 @@ export const LoginView: React.FC = () => {
         <div className="h-14 w-full px-6 md:px-12 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-label-md text-label-md uppercase text-on-surface tracking-wider font-semibold">
-              PanicDesk
+              PanicDeck
             </span>
             <span className="font-label-sm text-tertiary">/</span>
             <span className="font-label-sm text-tertiary">Study Terminal</span>
@@ -225,7 +225,7 @@ export const LoginView: React.FC = () => {
             </div>
 
             <h1 className="font-headline-xl text-headline-xl text-on-background tracking-tight font-normal leading-[1.08]">
-              PanicDesk<span className="text-primary italic">.</span>
+              PanicDeck<span className="text-primary italic">.</span>
             </h1>
 
             <p className="font-body-lg text-body-lg text-tertiary italic max-w-xl leading-relaxed">
@@ -243,8 +243,8 @@ export const LoginView: React.FC = () => {
                   <div className="text-on-surface font-medium">DynamoDB Ledger Sync</div>
                 </div>
                 <div>
-                  <div className="text-tertiary">Countdown to First Paper:</div>
-                  <div className="text-primary font-semibold font-code-sm">06d 14h 22m</div>
+                  <div className="text-tertiary">AI Engine Status:</div>
+                  <div className="text-secondary font-semibold font-code-sm">Active // Online</div>
                 </div>
               </div>
             </div>
@@ -265,7 +265,7 @@ export const LoginView: React.FC = () => {
               </div>
 
               <p className="font-body-sm text-xs text-tertiary leading-relaxed">
-                Connect with your institutional Google credentials to restore your study plans, weak topic queues, and past-paper matrices.
+                Connect with your Google credentials to restore your study plans, weak topic queues, and past-paper matrices.
               </p>
 
               {authError && (
@@ -325,7 +325,7 @@ export const LoginView: React.FC = () => {
       </main>
 
       <footer className="w-full px-6 md:px-12 py-4 border-t border-surface-variant text-center font-label-sm text-xs text-tertiary">
-        PanicDesk Exam Prep Agent • Oxford/Cambridge Tripos Interface Module
+        PanicDeck Exam Prep Agent • Oxford/Cambridge Tripos Interface Module
       </footer>
     </div>
   );

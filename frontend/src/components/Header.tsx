@@ -1,32 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStudy } from '../context/StudyContext';
-import { Sun, Moon, Clock, LogOut } from 'lucide-react';
+import { Sun, Moon, LogOut } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme, setCurrentView, user, logout } = useStudy();
-  const [countdown, setCountdown] = useState({ days: 6, hours: 14, mins: 22, secs: 40 });
+  const [imgError, setImgError] = useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev.secs > 0) return { ...prev, secs: prev.secs - 1 };
-        if (prev.mins > 0) return { ...prev, mins: 59, secs: 59 };
-        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, mins: 59, secs: 59 };
-        if (prev.days > 0) return { ...prev, days: prev.days - 1, hours: 23, mins: 59, secs: 59 };
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const format2 = (n: number) => n.toString().padStart(2, '0');
   const userInitials = user?.name
     ? user.name
         .split(' ')
+        .filter(Boolean)
         .map((p) => p[0])
         .join('')
         .substring(0, 2)
         .toUpperCase()
+    : user?.email
+    ? user.email.substring(0, 2).toUpperCase()
     : 'PD';
 
   return (
@@ -36,7 +25,7 @@ export const Header: React.FC = () => {
           onClick={() => setCurrentView('landing')}
           className="flex items-center gap-2 cursor-pointer md:hidden hover:opacity-80"
         >
-          <span className="font-headline-md text-headline-md text-on-surface font-normal">PanicDesk</span>
+          <span className="font-headline-md text-headline-md text-on-surface font-normal">PanicDeck</span>
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
         </div>
 
@@ -52,15 +41,6 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-3 md:gap-4">
-        <div className="flex items-center gap-2 px-3 py-1 bg-surface-container border border-surface-variant rounded-sm">
-          <Clock className="w-3.5 h-3.5 text-primary" />
-          <span className="hidden sm:inline font-label-sm text-label-sm text-tertiary tracking-wider uppercase">
-            COUNTDOWN:
-          </span>
-          <span className="font-code-sm text-code-sm text-on-surface font-semibold">
-            {format2(countdown.days)}D : {format2(countdown.hours)}H : {format2(countdown.mins)}M
-          </span>
-        </div>
 
         <button
           onClick={toggleTheme}
@@ -75,14 +55,17 @@ export const Header: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-2">
-          {user?.picture ? (
+          {user?.picture && !imgError ? (
             <img
               src={user.picture}
-              alt={user.name}
-              className="w-8 h-8 rounded-full border border-primary/40 object-cover"
+              alt={user.name || 'User profile'}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+              onError={() => setImgError(true)}
+              className="w-8 h-8 rounded-full border border-primary/40 object-cover shrink-0 shadow-sm"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-code-sm text-xs font-semibold shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-code-sm text-xs font-semibold shrink-0 shadow-sm">
               {userInitials}
             </div>
           )}

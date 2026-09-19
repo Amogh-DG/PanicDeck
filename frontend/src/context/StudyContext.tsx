@@ -145,7 +145,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     api.setAuthToken(credential);
     setUser(profile);
     setIsLoggedIn(true);
-    localStorage.setItem('panicdesk_user', JSON.stringify(profile));
+    localStorage.setItem('panicdeck_user', JSON.stringify(profile));
     setCurrentView('overview');
     refreshFiles();
     refreshScores();
@@ -160,6 +160,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     api.setAuthToken(null);
     setUser(null);
     setIsLoggedIn(false);
+    localStorage.removeItem('panicdeck_user');
     localStorage.removeItem('panicdesk_user');
     setCurrentView('login');
   };

@@ -245,7 +245,7 @@ export const LandingView: React.FC = () => {
       {/* Municipal Academic Archive Footer */}
       <footer className="w-full bg-surface-container-highest border-t border-outline-variant px-4 md:px-12 py-6 text-tertiary font-label-sm text-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>PanicDesk autonomous revision ledger • Exam Prep Agent</div>
+          <div>PanicDeck autonomous revision ledger • Exam Prep Agent</div>
           <div className="flex items-center gap-4 font-code-sm">
             <span>REF: PD/REC-4029</span>
             <span>CLEARANCE: LEVEL-III</span>

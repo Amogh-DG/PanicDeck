@@ -23,14 +23,15 @@ class ApiClient {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
-    this.token = localStorage.getItem('panicdesk_auth_token');
+    this.token = localStorage.getItem('panicdeck_auth_token') || localStorage.getItem('panicdesk_auth_token');
   }
 
   setAuthToken(token: string | null) {
     this.token = token;
     if (token) {
-      localStorage.setItem('panicdesk_auth_token', token);
+      localStorage.setItem('panicdeck_auth_token', token);
     } else {
+      localStorage.removeItem('panicdeck_auth_token');
       localStorage.removeItem('panicdesk_auth_token');
     }
   }
