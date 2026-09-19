@@ -87,82 +87,83 @@ export const QuizzesView: React.FC = () => {
       )}
 
       {/* Quiz Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: Question Navigation List (4 cols) */}
-        <div className="lg:col-span-4 space-y-3">
-          <div className="flex items-center justify-between pb-1 border-b border-surface-variant font-label-stamp text-xs text-tertiary">
-            <span>QUESTION REGISTRY</span>
-            <span>
-              {answeredCount} / {questions.length} Answered
-            </span>
+      {questions.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left: Question Navigation List (4 cols) */}
+          <div className="lg:col-span-4 space-y-3">
+            <div className="flex items-center justify-between pb-1 border-b border-surface-variant font-label-stamp text-xs text-tertiary">
+              <span>QUESTION REGISTRY</span>
+              <span>
+                {answeredCount} / {questions.length} Answered
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {questions.map((q, idx) => {
+                const isSelected = idx === currentIdx;
+                const hasAnswer = quizAnswers[q.id] !== undefined;
+                const isCorrect =
+                  quizSubmitted && quizAnswers[q.id] === q.correct_answer_index;
+                const isWrong =
+                  quizSubmitted &&
+                  hasAnswer &&
+                  quizAnswers[q.id] !== q.correct_answer_index;
+
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => setCurrentIdx(idx)}
+                    className={`w-full p-3 rounded-md text-left transition-all border flex items-center justify-between ${
+                      isSelected
+                        ? 'bg-surface-container-highest border-primary shadow-sm'
+                        : 'bg-surface-container border-surface-variant hover:border-outline-variant'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-code-sm text-xs text-tertiary">
+                        Q{idx + 1}
+                      </span>
+                      <span className="font-title-sm text-xs text-on-surface font-medium truncate max-w-[180px]">
+                        {q.question}
+                      </span>
+                    </div>
+
+                    {/* Status icons */}
+                    {quizSubmitted ? (
+                      isCorrect ? (
+                        <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-error shrink-0" />
+                      )
+                    ) : hasAnswer ? (
+                      <span className="w-2 h-2 rounded-full bg-primary shrink-0"></span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            {!quizSubmitted && (
+              <button
+                onClick={handleSubmitQuiz}
+                disabled={!isAllAnswered}
+                className={`w-full py-3 rounded-md font-title-sm text-xs uppercase tracking-wider flex items-center justify-center gap-2 mt-4 shadow-sm transition-all ${
+                  isAllAnswered
+                    ? 'bg-inverse-surface text-inverse-on-surface hover:translate-y-[-1px]'
+                    : 'bg-surface-container-high text-tertiary opacity-60 cursor-not-allowed'
+                }`}
+              >
+                <span>Submit for Actuarial Grading</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          <div className="space-y-2">
-            {questions.map((q, idx) => {
-              const isSelected = idx === currentIdx;
-              const hasAnswer = quizAnswers[q.id] !== undefined;
-              const isCorrect =
-                quizSubmitted && quizAnswers[q.id] === q.correct_answer_index;
-              const isWrong =
-                quizSubmitted &&
-                hasAnswer &&
-                quizAnswers[q.id] !== q.correct_answer_index;
-
-              return (
-                <button
-                  key={q.id}
-                  onClick={() => setCurrentIdx(idx)}
-                  className={`w-full p-3 rounded-md text-left transition-all border flex items-center justify-between ${
-                    isSelected
-                      ? 'bg-surface-container-highest border-primary shadow-sm'
-                      : 'bg-surface-container border-surface-variant hover:border-outline-variant'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-code-sm text-xs text-tertiary">
-                      Q{idx + 1}
-                    </span>
-                    <span className="font-title-sm text-xs text-on-surface font-medium truncate max-w-[180px]">
-                      {q.question}
-                    </span>
-                  </div>
-
-                  {/* Status icons */}
-                  {quizSubmitted ? (
-                    isCorrect ? (
-                      <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-error shrink-0" />
-                    )
-                  ) : hasAnswer ? (
-                    <span className="w-2 h-2 rounded-full bg-primary shrink-0"></span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-
-          {!quizSubmitted && (
-            <button
-              onClick={handleSubmitQuiz}
-              disabled={!isAllAnswered}
-              className={`w-full py-3 rounded-md font-title-sm text-xs uppercase tracking-wider flex items-center justify-center gap-2 mt-4 shadow-sm transition-all ${
-                isAllAnswered
-                  ? 'bg-inverse-surface text-inverse-on-surface hover:translate-y-[-1px]'
-                  : 'bg-surface-container-high text-tertiary opacity-60 cursor-not-allowed'
-              }`}
-            >
-              <span>Submit for Actuarial Grading</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Right: Active Question Card (8 cols) */}
-        <div className="lg:col-span-8">
-          {currentQ ? (
-            <div className="p-6 md:p-8 bg-surface-container border border-surface-variant rounded-md shadow-sm space-y-6">
-              <div className="flex items-center justify-between border-b border-surface-variant pb-3">
+          {/* Right: Active Question Card (8 cols) */}
+          <div className="lg:col-span-8">
+            {currentQ ? (
+              <div className="p-6 md:p-8 bg-surface-container border border-surface-variant rounded-md shadow-sm space-y-6">
+                <div className="flex items-center justify-between border-b border-surface-variant pb-3">
                 <span className="font-label-stamp text-xs text-primary uppercase tracking-widest">
                   QUESTION {currentIdx + 1} OF {questions.length} • TOPIC {currentQ.topic_id}
                 </span>
@@ -243,6 +244,26 @@ export const QuizzesView: React.FC = () => {
           ) : null}
         </div>
       </div>
+      ) : (
+        <div className="p-10 bg-surface-container border border-surface-variant rounded-md text-center space-y-4 max-w-xl mx-auto shadow-sm">
+          <HelpCircle className="w-10 h-10 text-primary mx-auto opacity-70" />
+          <div className="space-y-1">
+            <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">
+              Ready for Active Recall Drill
+            </h3>
+            <p className="font-body-sm text-xs text-tertiary">
+              Synthesize 4-option multiple choice questions weighted by past exam papers and topic summaries.
+            </p>
+          </div>
+          <button
+            onClick={handleLoadQuiz}
+            className="px-5 py-2.5 bg-primary text-on-primary font-title-sm text-xs rounded-md shadow-sm hover:bg-primary-container inline-flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Generate Drill on All Topics</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

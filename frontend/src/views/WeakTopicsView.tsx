@@ -84,62 +84,83 @@ export const WeakTopicsView: React.FC = () => {
 
       {/* Ranked List */}
       <div className="space-y-4">
-        {weakTopics.map((topic, idx) => (
-          <div
-            key={topic.topic_id || idx}
-            className={`p-6 bg-surface-container border rounded-md shadow-sm transition-all space-y-4 ${
-              topic.severity === 'high'
-                ? 'border-error/60 bg-error-container/5 hover:border-error'
-                : 'border-surface-variant hover:border-outline-variant'
-            }`}
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-variant/80 pb-3">
-              <div className="flex items-center gap-3">
-                <span className="w-7 h-7 rounded bg-surface-container-highest flex items-center justify-center font-code-sm text-xs text-tertiary font-bold">
-                  #{idx + 1}
-                </span>
-                <span className="font-code-sm text-xs text-primary font-semibold">
-                  TOPIC ID: {topic.topic_id}
-                </span>
+        {weakTopics.length > 0 ? (
+          weakTopics.map((topic, idx) => (
+            <div
+              key={topic.topic_id || idx}
+              className={`p-6 bg-surface-container border rounded-md shadow-sm transition-all space-y-4 ${
+                topic.severity === 'high'
+                  ? 'border-error/60 bg-error-container/5 hover:border-error'
+                  : 'border-surface-variant hover:border-outline-variant'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-variant/80 pb-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-7 h-7 rounded bg-surface-container-highest flex items-center justify-center font-code-sm text-xs text-tertiary font-bold">
+                    #{idx + 1}
+                  </span>
+                  <span className="font-code-sm text-xs text-primary font-semibold">
+                    TOPIC ID: {topic.topic_id}
+                  </span>
+                </div>
+                <div>{getSeverityBadge(topic.severity)}</div>
               </div>
-              <div>{getSeverityBadge(topic.severity)}</div>
-            </div>
 
-            <div className="space-y-1.5">
-              <h3 className="font-headline-md text-headline-md text-on-surface">
-                {topic.name}
+              <div className="space-y-1.5">
+                <h3 className="font-headline-md text-headline-md text-on-surface">
+                  {topic.name}
+                </h3>
+                <p className="font-body-md text-sm text-on-surface-variant">
+                  <strong className="text-primary font-semibold">Causal Diagnostic:</strong> {topic.reason}
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-4 font-body-sm text-xs text-tertiary">
+                <div className="flex items-center gap-4">
+                  <span>Historical Exam Yield: <strong className="text-on-surface">35%</strong></span>
+                  <span>•</span>
+                  <span>Confidence: <strong className="text-error">Low (33%)</strong></span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setCurrentView('notes')}
+                    className="px-3 py-1.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant text-on-surface rounded font-title-sm flex items-center gap-1.5"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-tertiary" />
+                    <span>Review Notes</span>
+                  </button>
+                  <button
+                    onClick={handleLaunchTargetedDrill}
+                    className="px-3 py-1.5 bg-inverse-surface hover:bg-inverse-surface/90 text-inverse-on-surface rounded font-title-sm flex items-center gap-1.5"
+                  >
+                    <span>Drill Concept</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-10 bg-surface-container border border-surface-variant rounded-md text-center space-y-4 max-w-xl mx-auto shadow-sm">
+            <AlertTriangle className="w-10 h-10 text-secondary mx-auto opacity-70" />
+            <div className="space-y-1">
+              <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">
+                No Blindspots Flagged Yet
               </h3>
-              <p className="font-body-md text-sm text-on-surface-variant">
-                <strong className="text-primary font-semibold">Causal Diagnostic:</strong> {topic.reason}
+              <p className="font-body-sm text-xs text-tertiary">
+                Complete a quiz drill to run causal diagnostics and rank topics by exam occurrence and recall errors.
               </p>
             </div>
-
-            <div className="pt-2 flex flex-wrap items-center justify-between gap-4 font-body-sm text-xs text-tertiary">
-              <div className="flex items-center gap-4">
-                <span>Historical Exam Yield: <strong className="text-on-surface">35%</strong></span>
-                <span>•</span>
-                <span>Confidence: <strong className="text-error">Low (33%)</strong></span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setCurrentView('notes')}
-                  className="px-3 py-1.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant text-on-surface rounded font-title-sm flex items-center gap-1.5"
-                >
-                  <BookOpen className="w-3.5 h-3.5 text-tertiary" />
-                  <span>Review Notes</span>
-                </button>
-                <button
-                  onClick={handleLaunchTargetedDrill}
-                  className="px-3 py-1.5 bg-inverse-surface hover:bg-inverse-surface/90 text-inverse-on-surface rounded font-title-sm flex items-center gap-1.5"
-                >
-                  <span>Drill Concept</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+            <button
+              onClick={handleLaunchTargetedDrill}
+              className="px-5 py-2.5 bg-primary text-on-primary font-title-sm text-xs rounded-md shadow-sm hover:bg-primary-container inline-flex items-center gap-2"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Launch First Active Recall Drill</span>
+            </button>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

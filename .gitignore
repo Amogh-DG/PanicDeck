@@ -38,3 +38,9 @@ dist/
 **/dist/
 .agents/
 .gemini/
+data/
+uploads/
+*.db
+*.sqlite
+*.sqlite3
+

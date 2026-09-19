@@ -88,44 +88,68 @@ export const CoverageView: React.FC = () => {
           <span>ACTION</span>
         </div>
 
-        {coverageGaps.map((gap, idx) => {
-          const isDone = synthesized[gap.name];
-          return (
-            <div
-              key={idx}
-              className="p-5 bg-surface-container border border-surface-variant rounded-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm hover:border-outline-variant transition-all"
-            >
-              <div className="flex items-start gap-3 min-w-0">
-                <AlertCircle className="w-5 h-5 text-error shrink-0 mt-0.5" />
-                <div className="space-y-1 min-w-0">
-                  <div className="font-title-sm text-sm text-on-surface font-semibold truncate">
-                    {gap.name}
-                  </div>
-                  <div className="font-body-sm text-xs text-tertiary leading-relaxed">
-                    {gap.reason}
+        {coverageGaps.length > 0 ? (
+          coverageGaps.map((gap, idx) => {
+            const isDone = synthesized[gap.name];
+            return (
+              <div
+                key={idx}
+                className="p-5 bg-surface-container border border-surface-variant rounded-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm hover:border-outline-variant transition-all"
+              >
+                <div className="flex items-start gap-3 min-w-0">
+                  <AlertCircle className="w-5 h-5 text-error shrink-0 mt-0.5" />
+                  <div className="space-y-1 min-w-0">
+                    <div className="font-title-sm text-sm text-on-surface font-semibold truncate">
+                      {gap.name}
+                    </div>
+                    <div className="font-body-sm text-xs text-tertiary leading-relaxed">
+                      {gap.reason}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="shrink-0 flex items-center gap-3">
-                {isDone ? (
-                  <span className="font-code-sm text-xs text-secondary flex items-center gap-1 font-bold">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Synthesized into Notes
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => handleSynthesize(gap.name)}
-                    className="px-4 py-2 bg-secondary text-on-secondary font-title-sm text-xs rounded-md shadow-sm hover:bg-secondary-container hover:text-on-secondary-container flex items-center gap-2 transition-all"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Auto-Synthesize Missing Proof</span>
-                  </button>
-                )}
+                <div className="shrink-0 flex items-center gap-3">
+                  {isDone ? (
+                    <span className="font-code-sm text-xs text-secondary flex items-center gap-1 font-bold">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Synthesized into Notes
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleSynthesize(gap.name)}
+                      className="px-4 py-2 bg-secondary text-on-secondary font-title-sm text-xs rounded-md shadow-sm hover:bg-secondary-container hover:text-on-secondary-container flex items-center gap-2 transition-all"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Auto-Synthesize Missing Proof</span>
+                    </button>
+                  )}
+                </div>
               </div>
+            );
+          })
+        ) : (
+          <div className="p-10 bg-surface-container border border-surface-variant rounded-md text-center space-y-4 max-w-xl mx-auto shadow-sm">
+            <PieChart className="w-10 h-10 text-primary mx-auto opacity-70" />
+            <div className="space-y-1">
+              <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">
+                Syllabus Audit Ready
+              </h3>
+              <p className="font-body-sm text-xs text-tertiary">
+                Upload your course syllabus document to cross-reference lecture dossiers against required exam specifications.
+              </p>
             </div>
-          );
-        })}
+            <label className="px-5 py-2.5 bg-primary text-on-primary font-title-sm text-xs rounded-md shadow-sm hover:bg-primary-container cursor-pointer inline-flex items-center gap-2">
+              <Upload className="w-4 h-4" />
+              <span>Choose Syllabus Document</span>
+              <input
+                type="file"
+                className="hidden"
+                onChange={handleFileInput}
+                accept=".pdf,.txt,.docx"
+              />
+            </label>
+          </div>
+        )}
       </div>
     </div>
   );

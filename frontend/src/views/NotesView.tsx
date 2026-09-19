@@ -114,41 +114,52 @@ export const NotesView: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            {topics.map((t, idx) => {
-              const isSelected = (activeTopic?.topic_id || '') === t.topic_id;
-              return (
-                <button
-                  key={t.topic_id}
-                  onClick={() => setSelectedTopicId(t.topic_id)}
-                  className={`w-full p-3.5 rounded-md text-left transition-all border ${
-                    isSelected
-                      ? 'bg-surface-container-highest border-primary shadow-sm'
-                      : 'bg-surface-container border-surface-variant hover:border-outline-variant'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="font-code-sm text-xs text-tertiary">
-                      0{idx + 1}
-                    </span>
-                    <span className="font-code-sm text-[10px] text-primary">
-                      {t.topic_id}
-                    </span>
-                  </div>
-                  <div className="font-title-sm text-xs text-on-surface font-semibold mt-1 line-clamp-2">
-                    {t.name}
-                  </div>
-                </button>
-              );
-            })}
+            {topics.length > 0 ? (
+              topics.map((t, idx) => {
+                const isSelected = (activeTopic?.topic_id || '') === t.topic_id;
+                return (
+                  <button
+                    key={t.topic_id}
+                    onClick={() => setSelectedTopicId(t.topic_id)}
+                    className={`w-full p-3.5 rounded-md text-left transition-all border ${
+                      isSelected
+                        ? 'bg-surface-container-highest border-primary shadow-sm'
+                        : 'bg-surface-container border-surface-variant hover:border-outline-variant'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-code-sm text-xs text-tertiary">
+                        0{idx + 1}
+                      </span>
+                      <span className="font-code-sm text-[10px] text-primary">
+                        {t.topic_id}
+                      </span>
+                    </div>
+                    <div className="font-title-sm text-xs text-on-surface font-semibold mt-1 line-clamp-2">
+                      {t.name}
+                    </div>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="p-6 bg-surface-container border border-surface-variant rounded-md text-center space-y-2">
+                <FileText className="w-6 h-6 text-tertiary mx-auto opacity-40" />
+                <div className="font-body-sm text-xs text-tertiary">
+                  No topics extracted yet. Upload a lecture PDF or notes above to begin synthesis.
+                </div>
+              </div>
+            )}
           </div>
 
-          <button
-            onClick={handleLaunchQuiz}
-            className="w-full py-3 bg-inverse-surface text-inverse-on-surface font-title-sm text-xs rounded-md shadow-sm flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all mt-4"
-          >
-            <HelpCircle className="w-4 h-4 text-primary" />
-            <span>Generate Quiz on All Topics</span>
-          </button>
+          {topics.length > 0 && (
+            <button
+              onClick={handleLaunchQuiz}
+              className="w-full py-3 bg-inverse-surface text-inverse-on-surface font-title-sm text-xs rounded-md shadow-sm flex items-center justify-center gap-2 hover:translate-y-[-1px] transition-all mt-4"
+            >
+              <HelpCircle className="w-4 h-4 text-primary" />
+              <span>Generate Quiz on All Topics</span>
+            </button>
+          )}
         </div>
 
         {/* Right Column: Full Summary & Proof Reader (8 cols) */}

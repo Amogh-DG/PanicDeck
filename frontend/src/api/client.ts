@@ -12,18 +12,10 @@ import {
   UploadUrlResponse,
   DownloadUrlResponse,
   ListFilesResponse,
-  GetScoresResponse,
-  StoredQuizScore
+  GetScoresResponse
 } from './types';
-import {
-  INITIAL_TOPICS,
-  INITIAL_QUESTIONS,
-  INITIAL_WEAK_TOPICS,
-  INITIAL_COVERAGE_GAPS,
-  INITIAL_WEIGHTED_TOPICS
-} from './mockData';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 class ApiClient {
   private baseUrl: string;
@@ -58,10 +50,6 @@ class ApiClient {
   }
 
   private async request<TRes>(path: string, options: RequestInit): Promise<TRes> {
-    if (!this.baseUrl) {
-      throw new Error('NO_BACKEND_CONFIGURED');
-    }
-
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...options,
       headers: {
@@ -75,6 +63,7 @@ class ApiClient {
       try {
         const errorJson = await response.json();
         if (errorJson.message) errMessage = errorJson.message;
+        else if (errorJson.detail) errMessage = typeof errorJson.detail === 'string' ? errorJson.detail : JSON.stringify(errorJson.detail);
       } catch (_) {}
       throw new Error(errMessage);
     }
@@ -83,18 +72,10 @@ class ApiClient {
   }
 
   async getUploadUrl(fileName: string, contentType: string): Promise<UploadUrlResponse> {
-    if (this.baseUrl) {
-      return this.request<UploadUrlResponse>('/upload-url', {
-        method: 'POST',
-        body: JSON.stringify({ file_name: fileName, content_type: contentType })
-      });
-    }
-    const mockKey = `uploads/session_${Date.now()}/${encodeURIComponent(fileName)}`;
-    return {
-      status: 'success',
-      upload_url: '',
-      s3_key: mockKey
-    };
+    return this.request<UploadUrlResponse>('/upload-url', {
+      method: 'POST',
+      body: JSON.stringify({ file_name: fileName, content_type: contentType })
+    });
   }
 
   async uploadFileToS3(file: File, onProgress?: (percent: number) => void): Promise<string> {
@@ -114,144 +95,70 @@ class ApiClient {
 
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(`S3 upload failed with status ${xhr.status}`));
+          else reject(new Error(`File upload failed with status ${xhr.status}`));
         };
-        xhr.onerror = () => reject(new Error('S3 upload network error'));
+        xhr.onerror = () => reject(new Error('File upload network error'));
         xhr.send(file);
       });
       return uploadMeta.s3_key;
     }
 
-    for (let p = 20; p <= 100; p += 20) {
-      if (onProgress) onProgress(p);
-      await new Promise((r) => setTimeout(r, 60));
-    }
-    return uploadMeta.s3_key;
+    throw new Error('Failed to obtain upload URL from backend');
   }
 
   async summarize(request: SummarizeRequest): Promise<SummarizeResponse> {
-    if (this.baseUrl) {
-      return this.request<SummarizeResponse>('/summarize', {
-        method: 'POST',
-        body: JSON.stringify(request)
-      });
-    }
-    await new Promise((r) => setTimeout(r, 900));
-    return {
-      status: 'success',
-      topics: [
-        ...INITIAL_TOPICS,
-        {
-          topic_id: `t_${Date.now()}`,
-          name: `Synthesized Module (${request.s3_key.split('/').pop() || 'Notes'})`,
-          summary: `Bedrock OCR extraction complete. High yield correlation detected for thermodynamics and computational equilibria.`
-        }
-      ]
-    };
+    return this.request<SummarizeResponse>('/summarize', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
   }
 
   async generateQuiz(request: GenerateQuizRequest): Promise<GenerateQuizResponse> {
-    if (this.baseUrl) {
-      return this.request<GenerateQuizResponse>('/generate-quiz', {
-        method: 'POST',
-        body: JSON.stringify(request)
-      });
-    }
-    await new Promise((r) => setTimeout(r, 800));
-    return {
-      status: 'success',
-      questions: INITIAL_QUESTIONS
-    };
+    return this.request<GenerateQuizResponse>('/generate-quiz', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
   }
 
   async getWeakTopics(request: WeakTopicsRequest): Promise<WeakTopicsResponse> {
-    if (this.baseUrl) {
-      return this.request<WeakTopicsResponse>('/weak-topics', {
-        method: 'POST',
-        body: JSON.stringify(request)
-      });
-    }
-    await new Promise((r) => setTimeout(r, 600));
-    const missed = request.answers.filter((a) => !a.correct);
-    const weakList = missed.map((m) => {
-      const matched = request.topics?.find((t) => t.topic_id === m.topic_id);
-      return {
-        topic_id: m.topic_id,
-        name: matched ? matched.name : `Topic ${m.topic_id}`,
-        reason: `Missed question ${m.question_id} on recall drill`,
-        severity: 'high' as const
-      };
+    return this.request<WeakTopicsResponse>('/weak-topics', {
+      method: 'POST',
+      body: JSON.stringify(request)
     });
-    return {
-      status: 'success',
-      weak_topics: weakList.length > 0 ? weakList : INITIAL_WEAK_TOPICS
-    };
   }
 
   async getCoverageGaps(request: CoverageGapsRequest): Promise<CoverageGapsResponse> {
-    if (this.baseUrl) {
-      return this.request<CoverageGapsResponse>('/coverage-gaps', {
-        method: 'POST',
-        body: JSON.stringify(request)
-      });
-    }
-    await new Promise((r) => setTimeout(r, 800));
-    return {
-      status: 'success',
-      gaps: INITIAL_COVERAGE_GAPS
-    };
+    return this.request<CoverageGapsResponse>('/coverage-gaps', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
   }
 
   async getPastPaperWeighting(request: PastPaperWeightingRequest): Promise<PastPaperWeightingResponse> {
-    if (this.baseUrl) {
-      return this.request<PastPaperWeightingResponse>('/past-paper-weighting', {
-        method: 'POST',
-        body: JSON.stringify(request)
-      });
-    }
-    await new Promise((r) => setTimeout(r, 800));
-    return {
-      status: 'success',
-      weighted_topics: INITIAL_WEIGHTED_TOPICS
-    };
+    return this.request<PastPaperWeightingResponse>('/past-paper-weighting', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
   }
 
   async listFiles(): Promise<ListFilesResponse> {
-    if (this.baseUrl) {
-      return this.request<ListFilesResponse>('/list-files', {
-        method: 'GET'
-      });
-    }
-    return {
-      status: 'success',
-      files: []
-    };
+    return this.request<ListFilesResponse>('/list-files', {
+      method: 'GET'
+    });
   }
 
   async getDownloadUrl(s3Key: string): Promise<DownloadUrlResponse> {
-    if (this.baseUrl) {
-      return this.request<DownloadUrlResponse>('/download-url', {
-        method: 'POST',
-        body: JSON.stringify({ s3_key: s3Key })
-      });
-    }
-    return {
-      status: 'success',
-      download_url: ''
-    };
+    return this.request<DownloadUrlResponse>('/download-url', {
+      method: 'POST',
+      body: JSON.stringify({ s3_key: s3Key })
+    });
   }
 
   async getScores(limit = 20): Promise<GetScoresResponse> {
-    if (this.baseUrl) {
-      return this.request<GetScoresResponse>('/get-scores', {
-        method: 'POST',
-        body: JSON.stringify({ limit })
-      });
-    }
-    return {
-      status: 'success',
-      scores: []
-    };
+    return this.request<GetScoresResponse>('/get-scores', {
+      method: 'POST',
+      body: JSON.stringify({ limit })
+    });
   }
 }
 

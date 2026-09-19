@@ -9,13 +9,6 @@ import {
   FileItem,
   StoredQuizScore
 } from '../api/types';
-import {
-  INITIAL_TOPICS,
-  INITIAL_QUESTIONS,
-  INITIAL_WEAK_TOPICS,
-  INITIAL_COVERAGE_GAPS,
-  INITIAL_WEIGHTED_TOPICS
-} from '../api/mockData';
 import { api } from '../api/client';
 
 export type ViewType =
@@ -130,14 +123,14 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentView, setCurrentView] = useState<ViewType>(() => (storedToken ? 'overview' : 'login'));
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-  const [topics, setTopics] = useState<TopicSummary[]>(INITIAL_TOPICS);
-  const [questions, setQuestions] = useState<QuizQuestion[]>(INITIAL_QUESTIONS);
+  const [topics, setTopics] = useState<TopicSummary[]>([]);
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState<boolean>(false);
   const [quizScore, setQuizScore] = useState<{ correct: number; total: number } | null>(null);
-  const [weakTopics, setWeakTopics] = useState<WeakTopic[]>(INITIAL_WEAK_TOPICS);
-  const [coverageGaps, setCoverageGaps] = useState<CoverageGap[]>(INITIAL_COVERAGE_GAPS);
-  const [weightedTopics, setWeightedTopics] = useState<WeightedTopic[]>(INITIAL_WEIGHTED_TOPICS);
+  const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([]);
+  const [coverageGaps, setCoverageGaps] = useState<CoverageGap[]>([]);
+  const [weightedTopics, setWeightedTopics] = useState<WeightedTopic[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileRecord[]>([]);
   const [scoreHistory, setScoreHistory] = useState<StoredQuizScore[]>([]);
 
