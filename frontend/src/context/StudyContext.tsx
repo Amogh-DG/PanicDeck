@@ -36,7 +36,7 @@ interface StudyContextType {
   setCurrentView: (view: ViewType) => void;
   isLoggedIn: boolean;
   user: UserProfile | null;
-  loginWithGoogle: (credential: string) => void;
+  loginWithGoogle: (credential: string, customProfile?: Partial<UserProfile>) => void;
   logout: () => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
@@ -133,13 +133,13 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const clearError = () => setError(null);
 
-  const loginWithGoogle = (credential: string) => {
+  const loginWithGoogle = (credential: string, customProfile?: Partial<UserProfile>) => {
     const decoded = decodeJwtPayload(credential);
     const profile: UserProfile = {
-      sub: decoded.sub || 'user_' + Date.now(),
-      email: decoded.email || 'student@university.edu',
-      name: decoded.name || 'Candidate Scholar',
-      picture: decoded.picture,
+      sub: customProfile?.sub || decoded.sub || 'user_' + Date.now(),
+      email: customProfile?.email || decoded.email || 'scholar@university.edu',
+      name: customProfile?.name || decoded.name || 'Candidate Scholar',
+      picture: customProfile?.picture || decoded.picture,
       token: credential
     };
     api.setAuthToken(credential);
@@ -152,6 +152,11 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const logout = () => {
+    if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.disableAutoSelect();
+      } catch (_) {}
+    }
     api.setAuthToken(null);
     setUser(null);
     setIsLoggedIn(false);

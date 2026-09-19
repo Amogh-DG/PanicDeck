@@ -30,8 +30,28 @@ declare namespace google {
           width?: number | string;
         }
       ): void;
-      function prompt(): void;
+      function prompt(callback?: (notification: { isNotDisplayed: () => boolean; isSkippedMoment: () => boolean; getNotDisplayedReason: () => string }) => void): void;
       function disableAutoSelect(): void;
+      function revoke(hint: string, done?: () => void): void;
+    }
+    namespace oauth2 {
+      interface TokenResponse {
+        access_token: string;
+        token_type: string;
+        expires_in: number;
+        scope: string;
+        error?: string;
+        error_description?: string;
+      }
+      interface TokenClient {
+        requestAccessToken(overrideConfig?: { prompt?: string }): void;
+      }
+      function initTokenClient(config: {
+        client_id: string;
+        scope: string;
+        callback: (response: TokenResponse) => void;
+        error_callback?: (error: unknown) => void;
+      }): TokenClient;
     }
   }
 }
