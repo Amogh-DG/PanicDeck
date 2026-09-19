@@ -66,20 +66,30 @@ export const CoverageView: React.FC = () => {
       </div>
 
       {/* Coverage Status Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-surface-container border border-surface-variant rounded-md space-y-1">
-          <div className="font-label-sm text-[11px] text-tertiary uppercase">Total Syllabus Mandates</div>
-          <div className="font-headline-md text-headline-md text-on-surface font-bold">52 Requirements</div>
-        </div>
-        <div className="p-4 bg-surface-container border border-secondary/40 rounded-md space-y-1">
-          <div className="font-label-sm text-[11px] text-secondary uppercase">Covered in Uploaded Notes</div>
-          <div className="font-headline-md text-headline-md text-secondary font-bold">38 Documented (73%)</div>
-        </div>
-        <div className="p-4 bg-surface-container border border-error/40 rounded-md space-y-1">
-          <div className="font-label-sm text-[11px] text-error uppercase">Flagged Blindspots / Gaps</div>
-          <div className="font-headline-md text-headline-md text-error font-bold">{coverageGaps.length} Missing</div>
-        </div>
-      </div>
+      {(() => {
+        const totalMandates = topics.length + coverageGaps.length;
+        const coveragePct = totalMandates > 0 ? Math.round((topics.length / totalMandates) * 100) : 0;
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-surface-container border border-surface-variant rounded-md space-y-1">
+              <div className="font-label-sm text-[11px] text-tertiary uppercase">Total Syllabus Mandates</div>
+              <div className="font-headline-md text-headline-md text-on-surface font-bold">
+                {totalMandates > 0 ? `${totalMandates} Requirements` : '0 Requirements'}
+              </div>
+            </div>
+            <div className="p-4 bg-surface-container border border-secondary/40 rounded-md space-y-1">
+              <div className="font-label-sm text-[11px] text-secondary uppercase">Covered in Uploaded Notes</div>
+              <div className="font-headline-md text-headline-md text-secondary font-bold">
+                {topics.length} Documented ({coveragePct}%)
+              </div>
+            </div>
+            <div className="p-4 bg-surface-container border border-error/40 rounded-md space-y-1">
+              <div className="font-label-sm text-[11px] text-error uppercase">Flagged Blindspots / Gaps</div>
+              <div className="font-headline-md text-headline-md text-error font-bold">{coverageGaps.length} Missing</div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Gaps List */}
       <div className="space-y-4">

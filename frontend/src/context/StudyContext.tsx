@@ -97,30 +97,9 @@ function decodeJwtPayload(token: string): Partial<UserProfile> {
 }
 
 export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const storedToken = localStorage.getItem('panicdesk_auth_token');
-  const storedUser = localStorage.getItem('panicdesk_user');
-
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(Boolean(storedToken));
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    if (storedUser) {
-      try {
-        return JSON.parse(storedUser);
-      } catch (_) {}
-    }
-    if (storedToken) {
-      const decoded = decodeJwtPayload(storedToken);
-      return {
-        sub: decoded.sub || 'user_default',
-        email: decoded.email || 'student@university.edu',
-        name: decoded.name || 'Candidate Scholar',
-        picture: decoded.picture,
-        token: storedToken
-      };
-    }
-    return null;
-  });
-
-  const [currentView, setCurrentView] = useState<ViewType>(() => (storedToken ? 'overview' : 'login'));
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [currentView, setCurrentView] = useState<ViewType>('login');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   const [topics, setTopics] = useState<TopicSummary[]>([]);

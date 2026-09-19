@@ -25,15 +25,21 @@ export const OverviewView: React.FC = () => {
     handleLoadQuiz
   } = useStudy();
 
-  const latestScore = scoreHistory && scoreHistory.length > 0 ? scoreHistory[0] : null;
-  const calculatedAccuracy =
-    scoreHistory && scoreHistory.length > 0
-      ? Math.round(
-          (scoreHistory.reduce((acc, s) => acc + Number(s.overall_accuracy || 0), 0) /
-            scoreHistory.length) *
-            10
-        ) / 10
-      : 81.4;
+  const hasScores = scoreHistory && scoreHistory.length > 0;
+  const latestScore = hasScores ? scoreHistory[0] : null;
+  const calculatedAccuracy = hasScores
+    ? Math.round(
+        (scoreHistory.reduce((acc, s) => acc + Number(s.overall_accuracy || 0), 0) /
+          scoreHistory.length) *
+          10
+      ) / 10
+    : 0;
+
+  const hasTopics = topics.length > 0;
+  const totalTopics = topics.length + (coverageGaps.length || 0);
+  const coveragePct = hasTopics ? Math.round((topics.length / Math.max(1, totalTopics)) * 100) : 0;
+
+  const hasWeak = weakTopics && weakTopics.length > 0;
 
   const handleStartQuiz = async () => {
     await handleLoadQuiz();
@@ -102,23 +108,39 @@ export const OverviewView: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Card 1: Syllabus Coverage */}
           <div
-            onClick={() => setCurrentView('coverage')}
+            onClick={() => setCurrentView(hasTopics ? 'coverage' : 'notes')}
             className="p-5 bg-surface-container border border-surface-variant rounded-md cursor-pointer hover:border-primary transition-all space-y-3"
           >
             <div className="flex items-center justify-between font-label-sm text-xs text-tertiary">
               <span>Topics Covered</span>
-              <span className="font-code-sm text-primary font-bold">73% Complete</span>
+              <span className="font-code-sm text-primary font-bold">
+                {hasTopics ? `${coveragePct}% Complete` : '0% Complete'}
+              </span>
             </div>
             <div className="font-headline-lg text-headline-lg text-on-surface font-semibold">
-              38 <span className="text-body-lg text-tertiary font-normal">/ 52 Topics</span>
+              {topics.length}{' '}
+              <span className="text-body-lg text-tertiary font-normal">
+                {hasTopics ? `/ ${totalTopics} Topics` : 'Topics Extracted'}
+              </span>
             </div>
             {/* Progress bar */}
             <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: '73%' }}></div>
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500"
+                style={{ width: `${coveragePct}%` }}
+              ></div>
             </div>
             <div className="font-body-sm text-[11px] text-tertiary flex items-center justify-between">
-              <span>14 remaining to review</span>
-              <span className="text-primary font-medium">Audit Gaps →</span>
+              <span>
+                {hasTopics
+                  ? coverageGaps.length > 0
+                    ? `${coverageGaps.length} remaining to review`
+                    : 'Full notes coverage'
+                  : 'No lecture dossiers parsed'}
+              </span>
+              <span className="text-primary font-medium">
+                {hasTopics ? 'Audit Gaps →' : 'Upload Notes →'}
+              </span>
             </div>
           </div>
 
@@ -130,21 +152,25 @@ export const OverviewView: React.FC = () => {
             <div className="flex items-center justify-between font-label-sm text-xs text-tertiary">
               <span>Quiz Accuracy</span>
               <span className="font-code-sm text-secondary font-bold">
-                {latestScore ? `${scoreHistory.length} drills logged` : '+4.2% today'}
+                {hasScores
+                  ? `${scoreHistory.length} drill${scoreHistory.length > 1 ? 's' : ''} logged`
+                  : 'No drills taken'}
               </span>
             </div>
             <div className="font-headline-lg text-headline-lg text-on-surface font-semibold">
-              {calculatedAccuracy}%
+              {hasScores ? `${calculatedAccuracy}%` : '--%'}
             </div>
             <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
               <div
-                className="h-full bg-secondary rounded-full"
-                style={{ width: `${Math.min(100, calculatedAccuracy)}%` }}
+                className="h-full bg-secondary rounded-full transition-all duration-500"
+                style={{ width: `${hasScores ? Math.min(100, calculatedAccuracy) : 0}%` }}
               ></div>
             </div>
             <div className="font-body-sm text-[11px] text-tertiary flex items-center justify-between">
               <span>
-                {latestScore ? `Latest: ${latestScore.correct_count}/${latestScore.total_questions} correct` : 'First-pass active recall'}
+                {latestScore
+                  ? `Latest: ${latestScore.correct_count}/${latestScore.total_questions} correct`
+                  : 'First-pass active recall'}
               </span>
               <span className="text-secondary font-medium">Launch Drill →</span>
             </div>
@@ -164,10 +190,12 @@ export const OverviewView: React.FC = () => {
               <AlertTriangle className="w-5 h-5 text-error" />
             </div>
             <div className="font-code-sm text-xs text-on-surface-variant truncate">
-              {weakTopics.slice(0, 2).map((w) => w.name.split(' ')[0]).join(', ')}...
+              {hasWeak
+                ? weakTopics.slice(0, 2).map((w) => w.name).join(', ')
+                : 'No Blindspots Flagged'}
             </div>
             <div className="font-body-sm text-[11px] text-tertiary flex items-center justify-between">
-              <span>Ranked by exam frequency</span>
+              <span>{hasWeak ? 'Ranked by exam frequency' : 'All clear across drills'}</span>
               <span className="text-error font-medium">Inspect List →</span>
             </div>
           </div>
@@ -184,7 +212,26 @@ export const OverviewView: React.FC = () => {
           <span className="font-code-sm text-xs text-tertiary">#DIAG-04</span>
         </div>
         <p className="font-body-md text-on-surface leading-relaxed">
-          “Your retention drops sharply on quiz questions attempted after <strong className="text-primary">1:15 AM</strong>, while your error rate in <strong className="text-secondary">Virtual Memory Paging</strong> stems mostly from multi-level page table lookups rather than TLB calculations.”
+          {hasWeak ? (
+            <>
+              “Actuarial diagnostic flagged high-priority blindspot in{' '}
+              <strong className="text-primary">{weakTopics[0].name}</strong> ({weakTopics[0].reason}). High-frequency exam weighting recommends targeted recall drills before your next session.”
+            </>
+          ) : hasScores ? (
+            <>
+              “Current aggregate recall accuracy across {scoreHistory.length} drill session
+              {scoreHistory.length > 1 ? 's' : ''} stands at{' '}
+              <strong className="text-secondary">{calculatedAccuracy}%</strong>. Continue completing active recall drills to refine causal diagnostics.”
+            </>
+          ) : hasTopics ? (
+            <>
+              “{topics.length} topic module{topics.length > 1 ? 's' : ''} synthesized from your lecture vault. Launch your first recall drill to generate cognitive diagnostics and identify high-yield exam blindspots.”
+            </>
+          ) : (
+            <>
+              “Commit lecture slides, handwritten notes, or syllabus files into the vault to generate topic summaries, active recall drills, and causal diagnostics.”
+            </>
+          )}
         </p>
       </section>
 
@@ -198,7 +245,7 @@ export const OverviewView: React.FC = () => {
                 Continue studying
               </h2>
               <span className="font-code-sm text-xs text-tertiary">
-                [03 RECENT FILES]
+                [{uploadedFiles.length.toString().padStart(2, '0')} RECENT FILES]
               </span>
             </div>
             <button
@@ -266,36 +313,89 @@ export const OverviewView: React.FC = () => {
               <span className="font-code-sm text-xs text-tertiary">[TONIGHT]</span>
             </div>
             <span className="font-code-sm text-xs text-primary font-bold">
-              90 MIN RESERVED
+              {hasWeak ? '90 MIN RESERVED' : hasTopics ? '75 MIN RESERVED' : '45 MIN RESERVED'}
             </span>
           </div>
 
           <div className="p-4 bg-surface-container border border-surface-variant rounded-md space-y-3">
             <div className="space-y-2.5 font-body-sm text-xs">
-              <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
-                <input
-                  type="checkbox"
-                  defaultChecked
-                  className="rounded border-outline-variant text-primary focus:ring-primary"
-                />
-                <span className="line-through text-tertiary">
-                  1. Re-derive Mundell-Fleming small open economy (20m)
-                </span>
-              </label>
-              <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
-                <input
-                  type="checkbox"
-                  className="rounded border-outline-variant text-primary focus:ring-primary"
-                />
-                <span>2. Flashcard drill: Carbonyl nucleophilic additions (25m)</span>
-              </label>
-              <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
-                <input
-                  type="checkbox"
-                  className="rounded border-outline-variant text-primary focus:ring-primary"
-                />
-                <span>3. Rapid 15-question past paper mock sprint (45m)</span>
-              </label>
+              {hasWeak ? (
+                <>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>1. Targeted drill: {weakTopics[0].name} (20m)</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>
+                      2. Review notes:{' '}
+                      {weakTopics[1] ? weakTopics[1].name : (topics[0]?.name || 'Flagged blindspots')}{' '}
+                      (25m)
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>3. Rapid 15-question past paper mock sprint (45m)</span>
+                  </label>
+                </>
+              ) : hasTopics ? (
+                <>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>1. Review synthesized dossier: {topics[0].name} (20m)</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>2. Complete 15-question active recall drill (25m)</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>3. Audit syllabus coverage gaps (30m)</span>
+                  </label>
+                </>
+              ) : (
+                <>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>1. Commit course slides or handwritten notes into vault (15m)</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>2. Cross-reference syllabus to audit coverage gaps (15m)</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-on-surface">
+                    <input
+                      type="checkbox"
+                      className="rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>3. Launch first baseline active recall drill (15m)</span>
+                  </label>
+                </>
+              )}
             </div>
 
             <div className="pt-3 border-t border-surface-variant flex items-center justify-between text-[11px] text-tertiary font-code-sm">
