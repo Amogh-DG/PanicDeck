@@ -16,7 +16,26 @@ import { CoverageView } from './views/CoverageView';
 import { PastPapersView } from './views/PastPapersView';
 
 const MainApp: React.FC = () => {
-  const { currentView } = useStudy();
+  const { currentView, isLoggedIn } = useStudy();
+
+  if (!isLoggedIn) {
+    if (currentView === 'landing') {
+      return (
+        <>
+          <LandingView />
+          <LoadingOverlay />
+          <ErrorAlert />
+        </>
+      );
+    }
+    return (
+      <>
+        <LoginView />
+        <LoadingOverlay />
+        <ErrorAlert />
+      </>
+    );
+  }
 
   if (currentView === 'landing') {
     return (
@@ -28,25 +47,11 @@ const MainApp: React.FC = () => {
     );
   }
 
-  if (currentView === 'login') {
-    return (
-      <>
-        <LoginView />
-        <LoadingOverlay />
-        <ErrorAlert />
-      </>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background text-on-surface flex flex-col transition-colors duration-200">
-      {/* Persistent Left Sidebar (Desktop) */}
       <Sidebar />
-
-      {/* Top Header */}
       <Header />
 
-      {/* Main Viewport Container offset by sidebar width */}
       <div className="md:pl-64 flex-1 flex flex-col w-full min-w-0">
         <main className="w-full max-w-5xl lg:max-w-6xl mx-auto pt-20 pb-20 md:pb-12 px-4 sm:px-6 md:px-8 flex-1 box-border">
           {currentView === 'overview' && <OverviewView />}
@@ -58,10 +63,7 @@ const MainApp: React.FC = () => {
         </main>
       </div>
 
-      {/* Bottom Nav (Mobile) */}
       <BottomNav />
-
-      {/* Global Overlays */}
       <LoadingOverlay />
       <ErrorAlert />
     </div>

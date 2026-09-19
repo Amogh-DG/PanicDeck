@@ -21,7 +21,7 @@ interface NavItem {
 }
 
 export const Sidebar: React.FC = () => {
-  const { currentView, setCurrentView, weakTopics, coverageGaps } = useStudy();
+  const { currentView, setCurrentView, weakTopics, coverageGaps, logout } = useStudy();
 
   const navItems: NavItem[] = [
     {
@@ -153,7 +153,7 @@ export const Sidebar: React.FC = () => {
             <span>Tripos Ledger</span>
           </button>
           <button
-            onClick={() => setCurrentView('login')}
+            onClick={logout}
             className="flex items-center gap-1 hover:text-error transition-colors"
           >
             <LogOut className="w-3 h-3" />

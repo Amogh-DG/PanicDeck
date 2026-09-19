@@ -4,7 +4,9 @@ import {
   QuizQuestion,
   WeakTopic,
   CoverageGap,
-  WeightedTopic
+  WeightedTopic,
+  UserProfile,
+  FileItem
 } from '../api/types';
 import {
   INITIAL_TOPICS,
@@ -39,11 +41,12 @@ interface StudyContextType {
   currentView: ViewType;
   setCurrentView: (view: ViewType) => void;
   isLoggedIn: boolean;
-  setIsLoggedIn: (logged: boolean) => void;
+  user: UserProfile | null;
+  loginWithGoogle: (credential: string) => void;
+  logout: () => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   
-  // Data state
   topics: TopicSummary[];
   questions: QuizQuestion[];
   quizAnswers: Record<string, number>;
@@ -54,13 +57,11 @@ interface StudyContextType {
   weightedTopics: WeightedTopic[];
   uploadedFiles: UploadedFileRecord[];
 
-  // Progress / async state
   isLoading: boolean;
   loadingStep: string;
   error: string | null;
   clearError: () => void;
 
-  // Actions
   handleUploadNotes: (file: File) => Promise<void>;
   handleLoadQuiz: () => Promise<void>;
   handleAnswerQuestion: (questionId: string, optionIndex: number) => void;
@@ -68,13 +69,62 @@ interface StudyContextType {
   handleResetQuiz: () => void;
   handleUploadSyllabus: (file: File) => Promise<void>;
   handleUploadPastPapers: (files: File[]) => Promise<void>;
+  refreshFiles: () => Promise<void>;
 }
 
 const StudyContext = createContext<StudyContextType | undefined>(undefined);
 
+function decodeJwtPayload(token: string): Partial<UserProfile> {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const parsed = JSON.parse(jsonPayload);
+    return {
+      sub: parsed.sub || 'user_' + Date.now(),
+      email: parsed.email || 'student@university.edu',
+      name: parsed.name || 'Candidate Scholar',
+      picture: parsed.picture
+    };
+  } catch (_) {
+    return {
+      sub: 'user_' + Date.now(),
+      email: 'student@university.edu',
+      name: 'Candidate Scholar'
+    };
+  }
+}
+
 export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentView, setCurrentView] = useState<ViewType>('overview');
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
+  const storedToken = localStorage.getItem('panicdesk_auth_token');
+  const storedUser = localStorage.getItem('panicdesk_user');
+
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(Boolean(storedToken));
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (_) {}
+    }
+    if (storedToken) {
+      const decoded = decodeJwtPayload(storedToken);
+      return {
+        sub: decoded.sub || 'user_default',
+        email: decoded.email || 'student@university.edu',
+        name: decoded.name || 'Candidate Scholar',
+        picture: decoded.picture,
+        token: storedToken
+      };
+    }
+    return null;
+  });
+
+  const [currentView, setCurrentView] = useState<ViewType>(() => (storedToken ? 'overview' : 'login'));
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   const [topics, setTopics] = useState<TopicSummary[]>(INITIAL_TOPICS);
@@ -85,42 +135,12 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [weakTopics, setWeakTopics] = useState<WeakTopic[]>(INITIAL_WEAK_TOPICS);
   const [coverageGaps, setCoverageGaps] = useState<CoverageGap[]>(INITIAL_COVERAGE_GAPS);
   const [weightedTopics, setWeightedTopics] = useState<WeightedTopic[]>(INITIAL_WEIGHTED_TOPICS);
-
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFileRecord[]>([
-    {
-      id: 'f1',
-      name: 'Advanced_Organic_Chemistry_Vol2.pdf',
-      s3_key: 'uploads/session_01/Advanced_Organic_Chemistry_Vol2.pdf',
-      type: 'notes',
-      uploadedAt: '42m ago',
-      size: '3.4 MB',
-      status: 'ready'
-    },
-    {
-      id: 'f2',
-      name: 'Microeconomic_Theory_Equilibrium.pdf',
-      s3_key: 'uploads/session_01/Microeconomic_Theory_Equilibrium.pdf',
-      type: 'notes',
-      uploadedAt: '2h ago',
-      size: '2.1 MB',
-      status: 'ready'
-    },
-    {
-      id: 'f3',
-      name: 'CS204_OS_Virtual_Memory_Paging.pdf',
-      s3_key: 'uploads/session_01/CS204_OS_Virtual_Memory_Paging.pdf',
-      type: 'notes',
-      uploadedAt: 'Yesterday',
-      size: '4.1 MB',
-      status: 'ready'
-    }
-  ]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFileRecord[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  // Sync theme with DOM document element
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -137,7 +157,55 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const clearError = () => setError(null);
 
-  // 1. Upload & Summarize Notes Flow
+  const loginWithGoogle = (credential: string) => {
+    const decoded = decodeJwtPayload(credential);
+    const profile: UserProfile = {
+      sub: decoded.sub || 'user_' + Date.now(),
+      email: decoded.email || 'student@university.edu',
+      name: decoded.name || 'Candidate Scholar',
+      picture: decoded.picture,
+      token: credential
+    };
+    api.setAuthToken(credential);
+    setUser(profile);
+    setIsLoggedIn(true);
+    localStorage.setItem('panicdesk_user', JSON.stringify(profile));
+    setCurrentView('overview');
+    refreshFiles();
+  };
+
+  const logout = () => {
+    api.setAuthToken(null);
+    setUser(null);
+    setIsLoggedIn(false);
+    localStorage.removeItem('panicdesk_user');
+    setCurrentView('login');
+  };
+
+  const refreshFiles = async () => {
+    try {
+      const res = await api.listFiles();
+      if (res.status === 'success' && res.files && res.files.length > 0) {
+        const mapped: UploadedFileRecord[] = res.files.map((f: FileItem) => ({
+          id: f.s3_key,
+          name: f.file_name,
+          s3_key: f.s3_key,
+          type: 'notes',
+          uploadedAt: new Date(f.last_modified).toLocaleDateString(),
+          size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+          status: 'ready'
+        }));
+        setUploadedFiles(mapped);
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      refreshFiles();
+    }
+  }, [isLoggedIn]);
+
   const handleUploadNotes = async (file: File) => {
     setIsLoading(true);
     setError(null);
@@ -157,7 +225,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setUploadedFiles((prev) => [newRecord, ...prev]);
 
       setLoadingStep('Extracting OCR & text streams via Bedrock AI...');
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 600));
 
       setLoadingStep('Synthesizing structured topic summaries...');
       const ext = file.name.split('.').pop()?.toLowerCase();
@@ -180,7 +248,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // 2. Generate Quiz
   const handleLoadQuiz = async () => {
     setIsLoading(true);
     setError(null);
@@ -212,7 +279,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
   };
 
-  // 3. Submit Quiz & Compute Weak Topics
   const handleSubmitQuiz = async () => {
     setIsLoading(true);
     setError(null);
@@ -233,7 +299,10 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setQuizScore({ correct: correctCount, total: questions.length });
       setQuizSubmitted(true);
 
-      const weakRes = await api.getWeakTopics({ answers: submissionList });
+      const weakRes = await api.getWeakTopics({
+        answers: submissionList,
+        topics: topics.map((t) => ({ topic_id: t.topic_id, name: t.name }))
+      });
       if (weakRes.status === 'success') {
         setWeakTopics(weakRes.weak_topics);
       }
@@ -251,7 +320,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setQuizScore(null);
   };
 
-  // 4. Syllabus Upload & Audit
   const handleUploadSyllabus = async (file: File) => {
     setIsLoading(true);
     setError(null);
@@ -275,7 +343,6 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // 5. Past Papers Upload & Weighting
   const handleUploadPastPapers = async (files: File[]) => {
     setIsLoading(true);
     setError(null);
@@ -306,7 +373,9 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentView,
         setCurrentView,
         isLoggedIn,
-        setIsLoggedIn,
+        user,
+        loginWithGoogle,
+        logout,
         theme,
         toggleTheme,
         topics,
@@ -328,7 +397,8 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         handleSubmitQuiz,
         handleResetQuiz,
         handleUploadSyllabus,
-        handleUploadPastPapers
+        handleUploadPastPapers,
+        refreshFiles
       }}
     >
       {children}

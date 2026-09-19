@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '../context/StudyContext';
-import { Sun, Moon, Sparkles, BookOpen, Clock, AlertCircle } from 'lucide-react';
+import { Sun, Moon, Clock, LogOut } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { theme, toggleTheme, currentView, setCurrentView } = useStudy();
+  const { theme, toggleTheme, setCurrentView, user, logout } = useStudy();
   const [countdown, setCountdown] = useState({ days: 6, hours: 14, mins: 22, secs: 40 });
 
   useEffect(() => {
@@ -20,10 +20,17 @@ export const Header: React.FC = () => {
   }, []);
 
   const format2 = (n: number) => n.toString().padStart(2, '0');
+  const userInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map((p) => p[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase()
+    : 'PD';
 
   return (
     <header className="fixed top-0 left-0 md:left-64 right-0 h-16 bg-surface/90 backdrop-blur-md z-40 border-b border-surface-variant px-4 md:px-8 flex items-center justify-between transition-colors duration-200">
-      {/* Left Mobile Brand / Desktop Marginalia */}
       <div className="flex items-center gap-3">
         <div 
           onClick={() => setCurrentView('landing')}
@@ -39,25 +46,22 @@ export const Header: React.FC = () => {
           </span>
           <span className="text-outline-variant font-label-sm">/</span>
           <span className="font-code-sm text-code-sm text-on-surface-variant">
-            NIGHT-SHIFT STUDY VAULT
+            {user?.email || 'NIGHT-SHIFT STUDY VAULT'}
           </span>
         </div>
       </div>
 
-      {/* Right Controls & Telemetry */}
-      <div className="flex items-center gap-3 md:gap-5">
-        {/* Countdown Badge */}
+      <div className="flex items-center gap-3 md:gap-4">
         <div className="flex items-center gap-2 px-3 py-1 bg-surface-container border border-surface-variant rounded-sm">
           <Clock className="w-3.5 h-3.5 text-primary" />
           <span className="hidden sm:inline font-label-sm text-label-sm text-tertiary tracking-wider uppercase">
-            EXAM COUNTDOWN:
+            COUNTDOWN:
           </span>
           <span className="font-code-sm text-code-sm text-on-surface font-semibold">
-            {format2(countdown.days)}D : {format2(countdown.hours)}H : {format2(countdown.mins)}M : {format2(countdown.secs)}S
+            {format2(countdown.days)}D : {format2(countdown.hours)}H : {format2(countdown.mins)}M
           </span>
         </div>
 
-        {/* Theme Switcher */}
         <button
           onClick={toggleTheme}
           title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Parchment'}
@@ -70,9 +74,26 @@ export const Header: React.FC = () => {
           )}
         </button>
 
-        {/* User Session Avatar */}
-        <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-code-sm text-xs font-semibold shadow-sm">
-          PD
+        <div className="flex items-center gap-2">
+          {user?.picture ? (
+            <img
+              src={user.picture}
+              alt={user.name}
+              className="w-8 h-8 rounded-full border border-primary/40 object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-code-sm text-xs font-semibold shadow-sm">
+              {userInitials}
+            </div>
+          )}
+
+          <button
+            onClick={logout}
+            title="Sign out of current desk"
+            className="p-1.5 text-tertiary hover:text-error transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </header>

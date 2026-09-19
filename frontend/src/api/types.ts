@@ -1,11 +1,19 @@
-// API Contract Types matching API_CONTRACT.md
+// API Contract Types matching API_CONTRACT.md and Lambda Handlers
 
-// Generic Status
 export type ApiStatus = 'success' | 'error';
 
 export interface ApiErrorResponse {
   status: 'error';
   message: string;
+}
+
+// User Profile for Google OAuth / Institutional Authentication
+export interface UserProfile {
+  sub: string;
+  email: string;
+  name: string;
+  picture?: string;
+  token: string;
 }
 
 // 3.1 summarize
@@ -55,6 +63,7 @@ export interface QuizAnswerSubmission {
 
 export interface WeakTopicsRequest {
   answers: QuizAnswerSubmission[];
+  topics?: Array<{ topic_id: string; name: string }>;
 }
 
 export type Severity = 'high' | 'medium' | 'low';
@@ -75,6 +84,7 @@ export interface WeakTopicsResponse {
 export interface CoverageGapsRequest {
   syllabus_s3_key: string;
   topics: TopicSummary[];
+  subject_code?: string;
 }
 
 export interface CoverageGap {
@@ -105,7 +115,7 @@ export interface PastPaperWeightingResponse {
   weighted_topics: WeightedTopic[];
 }
 
-// Upload URL contract (from lambdas/upload_url)
+// Presigned Upload URL (lambdas/upload_url)
 export interface UploadUrlRequest {
   file_name: string;
   content_type: string;
@@ -115,4 +125,27 @@ export interface UploadUrlResponse {
   status: 'success';
   upload_url: string;
   s3_key: string;
+}
+
+// Presigned Download URL (lambdas/download_url)
+export interface DownloadUrlRequest {
+  s3_key: string;
+}
+
+export interface DownloadUrlResponse {
+  status: 'success';
+  download_url: string;
+}
+
+// List Files (lambdas/list_files)
+export interface FileItem {
+  s3_key: string;
+  file_name: string;
+  size: number;
+  last_modified: string;
+}
+
+export interface ListFilesResponse {
+  status: 'success';
+  files: FileItem[];
 }

@@ -192,31 +192,49 @@ export const OverviewView: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {uploadedFiles.map((file, idx) => (
-              <div
-                key={file.id}
-                onClick={() => setCurrentView('notes')}
-                className="p-4 bg-surface-container border border-surface-variant rounded-md hover:border-primary transition-all cursor-pointer flex items-center justify-between gap-4"
-              >
-                <div className="flex items-start gap-3 min-w-0">
-                  <span className="font-code-sm text-xs text-tertiary mt-1">
-                    0{idx + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="font-title-sm text-sm text-on-surface truncate font-semibold">
-                      {file.name.replace('.pdf', '').replace(/_/g, ' ')}
-                    </div>
-                    <div className="font-body-sm text-xs text-tertiary mt-0.5">
-                      Uploaded {file.uploadedAt} • {file.size}
+            {uploadedFiles.length > 0 ? (
+              uploadedFiles.map((file, idx) => (
+                <div
+                  key={file.id}
+                  onClick={() => setCurrentView('notes')}
+                  className="p-4 bg-surface-container border border-surface-variant rounded-md hover:border-primary transition-all cursor-pointer flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    <span className="font-code-sm text-xs text-tertiary mt-1">
+                      0{idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-title-sm text-sm text-on-surface truncate font-semibold">
+                        {file.name.replace('.pdf', '').replace(/_/g, ' ')}
+                      </div>
+                      <div className="font-body-sm text-xs text-tertiary mt-0.5">
+                        Uploaded {file.uploadedAt} • {file.size}
+                      </div>
                     </div>
                   </div>
+                  <div className="shrink-0 flex items-center gap-2 text-primary font-title-sm text-xs">
+                    <span>Review</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </div>
                 </div>
-                <div className="shrink-0 flex items-center gap-2 text-primary font-title-sm text-xs">
-                  <span>Review</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+              ))
+            ) : (
+              <div className="p-8 bg-surface-container border border-surface-variant rounded-md text-center space-y-3">
+                <FileText className="w-8 h-8 text-tertiary mx-auto opacity-50" />
+                <div className="font-title-sm text-sm text-on-surface font-medium">
+                  No lecture dossiers uploaded yet
                 </div>
+                <p className="font-body-sm text-xs text-tertiary max-w-sm mx-auto">
+                  Commit your course slides, handwritten notes, or syllabus into the vault to generate topic summaries.
+                </p>
+                <button
+                  onClick={() => setCurrentView('notes')}
+                  className="px-4 py-2 bg-primary text-on-primary font-title-sm text-xs rounded-md shadow-sm hover:bg-primary-container"
+                >
+                  Upload First Dossier
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </section>
 
