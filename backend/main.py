@@ -16,10 +16,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field
 
-# Determine paths
+# Determine paths (use /tmp when running inside AWS Lambda)
+IS_LAMBDA = bool(os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOADS_DIR = BASE_DIR / "uploads"
-DATA_DIR = BASE_DIR / "data"
+UPLOADS_DIR = Path("/tmp/uploads") if IS_LAMBDA else BASE_DIR / "uploads"
+DATA_DIR = Path("/tmp/data") if IS_LAMBDA else BASE_DIR / "data"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "panicdeck.db"
@@ -46,6 +47,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# DynamoDB Configuration
+DYNAMODB_SCORES_TABLE = os.environ.get("DYNAMODB_SCORES_TABLE", "PanicDeck-Scores")
+DYNAMODB_FILES_TABLE = os.environ.get("DYNAMODB_FILES_TABLE", "PanicDeck-Files")
+AWS_REGION = os.environ.get("AWS_REGION", "ap-south-1")
+
+def get_dynamo_resource():
+    try:
+        import boto3
+        return boto3.resource("dynamodb", region_name=AWS_REGION)
+    except Exception:
+        return None
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
@@ -79,6 +92,109 @@ def init_db():
         conn.commit()
 
 init_db()
+
+def save_quiz_score_db(item: dict):
+    # 1. Try DynamoDB first
+    try:
+        dynamo = get_dynamo_resource()
+        if dynamo:
+            table = dynamo.Table(DYNAMODB_SCORES_TABLE)
+            table.put_item(Item={
+                "user_id": item["user_id"],
+                "created_at": item["timestamp_quiz_id"],
+                "quiz_id": item["quiz_id"],
+                "total_questions": item["total_questions"],
+                "correct_count": item["correct_count"],
+                "overall_accuracy": str(item["overall_accuracy"]),
+                "topic_breakdown": json.dumps(item["topic_breakdown"]),
+                "weak_topics": json.dumps(item["weak_topics"])
+            })
+            print(f"[DynamoDB] Saved quiz result to {DYNAMODB_SCORES_TABLE}")
+            return
+    except Exception as e:
+        print(f"[DynamoDB Notice (saving to SQLite fallback)]: {e}")
+
+    # 2. Fallback to SQLite
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO quiz_results 
+            (user_id, timestamp_quiz_id, quiz_id, total_questions, correct_count, overall_accuracy, topic_breakdown, weak_topics, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            item["user_id"],
+            item["timestamp_quiz_id"],
+            item["quiz_id"],
+            item["total_questions"],
+            item["correct_count"],
+            item["overall_accuracy"],
+            json.dumps(item["topic_breakdown"]),
+            json.dumps(item["weak_topics"]),
+            item["created_at"]
+        ))
+        conn.commit()
+
+def fetch_quiz_scores_db(user_id: str, limit: int = 20) -> list:
+    # 1. Try DynamoDB first
+    try:
+        dynamo = get_dynamo_resource()
+        if dynamo:
+            from boto3.dynamodb.conditions import Key
+            table = dynamo.Table(DYNAMODB_SCORES_TABLE)
+            response = table.query(
+                KeyConditionExpression=Key("user_id").eq(user_id),
+                ScanIndexForward=False,
+                Limit=limit
+            )
+            items = response.get("Items", [])
+            if items:
+                res = []
+                for it in items:
+                    tb = json.loads(it.get("topic_breakdown", "[]")) if isinstance(it.get("topic_breakdown"), str) else it.get("topic_breakdown", [])
+                    wt = json.loads(it.get("weak_topics", "[]")) if isinstance(it.get("weak_topics"), str) else it.get("weak_topics", [])
+                    res.append({
+                        "user_id": it["user_id"],
+                        "timestamp_quiz_id": it["created_at"],
+                        "quiz_id": it.get("quiz_id", ""),
+                        "total_questions": int(it.get("total_questions", 0)),
+                        "correct_count": int(it.get("correct_count", 0)),
+                        "overall_accuracy": float(it.get("overall_accuracy", 0)),
+                        "topic_breakdown": tb,
+                        "weak_topics": wt,
+                        "created_at": it["created_at"]
+                    })
+                return res
+    except Exception as e:
+        print(f"[DynamoDB Query Notice (falling back to SQLite)]: {e}")
+
+    # 2. Fallback to SQLite
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT user_id, timestamp_quiz_id, quiz_id, total_questions, correct_count, overall_accuracy, topic_breakdown, weak_topics, created_at
+            FROM quiz_results
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+        """, (user_id, limit))
+        rows = cursor.fetchall()
+
+    scores = []
+    for r in rows:
+        tb = json.loads(r[6]) if r[6] else []
+        wt = json.loads(r[7]) if r[7] else []
+        scores.append({
+            "user_id": r[0],
+            "timestamp_quiz_id": r[1],
+            "quiz_id": r[2],
+            "total_questions": r[3],
+            "correct_count": r[4],
+            "overall_accuracy": r[5],
+            "topic_breakdown": tb,
+            "weak_topics": wt,
+            "created_at": r[8]
+        })
+    return scores
 
 def get_user_id(authorization: Optional[str] = None) -> str:
     if not authorization:
@@ -206,8 +322,30 @@ def upload_url(req: UploadUrlRequest, request: Request, authorization: Optional[
     file_uuid = uuid.uuid4().hex
     s3_key = f"uploads/{user_id}/{file_uuid}/{safe_name}"
 
-    base_url = str(request.base_url).rstrip("/")
-    put_url = f"{base_url}/api/upload-direct/{s3_key}"
+    s3_bucket = os.environ.get("S3_BUCKET")
+    aws_region = os.environ.get("AWS_REGION", "ap-south-1")
+    put_url = None
+
+    # Try generating genuine S3 presigned upload URL
+    if s3_bucket:
+        try:
+            import boto3
+            s3_client = boto3.client("s3", region_name=aws_region)
+            put_url = s3_client.generate_presigned_url(
+                ClientMethod="put_object",
+                Params={
+                    "Bucket": s3_bucket,
+                    "Key": s3_key,
+                    "ContentType": req.content_type or "application/pdf"
+                },
+                ExpiresIn=3600
+            )
+        except Exception as presign_err:
+            print(f"[Presign Notice (fallback to API)]: {presign_err}")
+
+    if not put_url:
+        base_url = str(request.base_url).rstrip("/")
+        put_url = f"{base_url}/api/upload-direct/{s3_key}"
 
     now_iso = datetime.now(timezone.utc).isoformat()
     with sqlite3.connect(DB_PATH) as conn:
@@ -299,6 +437,18 @@ def summarize(req: SummarizeRequest):
     if file_path.exists():
         with open(file_path, "rb") as f:
             raw_bytes = f.read()
+    else:
+        # Fetch from AWS S3 bucket if running in cloud
+        s3_bucket = os.environ.get("S3_BUCKET")
+        aws_region = os.environ.get("AWS_REGION", "ap-south-1")
+        if s3_bucket:
+            try:
+                import boto3
+                s3_client = boto3.client("s3", region_name=aws_region)
+                s3_obj = s3_client.get_object(Bucket=s3_bucket, Key=req.s3_key)
+                raw_bytes = s3_obj["Body"].read()
+            except Exception as s3_get_err:
+                print(f"[S3 Get Notice]: {s3_get_err}")
 
     file_name = req.s3_key.split("/")[-1]
     ext = file_name.split(".")[-1].lower() if "." in file_name else ""
@@ -598,24 +748,17 @@ def weak_topics(req: WeakTopicsRequest, authorization: Optional[str] = Header(No
     now_iso = datetime.now(timezone.utc).isoformat()
     sk = f"{now_iso}#{quiz_id}"
 
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO quiz_results 
-            (user_id, timestamp_quiz_id, quiz_id, total_questions, correct_count, overall_accuracy, topic_breakdown, weak_topics, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            user_id,
-            sk,
-            quiz_id,
-            total_questions,
-            correct_count,
-            overall_accuracy,
-            json.dumps(topic_breakdown),
-            json.dumps(weak_list),
-            now_iso
-        ))
-        conn.commit()
+    save_quiz_score_db({
+        "user_id": user_id,
+        "timestamp_quiz_id": sk,
+        "quiz_id": quiz_id,
+        "total_questions": total_questions,
+        "correct_count": correct_count,
+        "overall_accuracy": overall_accuracy,
+        "topic_breakdown": topic_breakdown,
+        "weak_topics": weak_list,
+        "created_at": now_iso
+    })
 
     return {
         "status": "success",
@@ -633,34 +776,7 @@ def weak_topics(req: WeakTopicsRequest, authorization: Optional[str] = Header(No
 def get_scores(req: Optional[GetScoresRequest] = None, authorization: Optional[str] = Header(None)):
     user_id = get_user_id(authorization)
     limit = req.limit if req and req.limit else 20
-
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT user_id, timestamp_quiz_id, quiz_id, total_questions, correct_count, overall_accuracy, topic_breakdown, weak_topics, created_at
-            FROM quiz_results
-            WHERE user_id = ?
-            ORDER BY id DESC
-            LIMIT ?
-        """, (user_id, limit))
-        rows = cursor.fetchall()
-
-    scores = []
-    for r in rows:
-        tb = json.loads(r[6]) if r[6] else []
-        wt = json.loads(r[7]) if r[7] else []
-        scores.append({
-            "user_id": r[0],
-            "timestamp_quiz_id": r[1],
-            "quiz_id": r[2],
-            "total_questions": r[3],
-            "correct_count": r[4],
-            "overall_accuracy": r[5],
-            "topic_breakdown": tb,
-            "weak_topics": wt,
-            "created_at": r[8]
-        })
-
+    scores = fetch_quiz_scores_db(user_id=user_id, limit=limit)
     return {"status": "success", "scores": scores}
 
 @app.post("/coverage-gaps")

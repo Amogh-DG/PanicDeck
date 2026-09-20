@@ -44,4 +44,4 @@ uploads/
 *.sqlite
 *.sqlite3
 lambda_backend.zip
-build_lambda/
+/build_lambda
