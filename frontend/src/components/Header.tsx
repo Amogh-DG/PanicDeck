@@ -94,95 +94,116 @@ export const Header: React.FC = () => {
           <span className="text-outline-variant font-label-sm">/</span>
 
           {/* Subject Selector Dropdown next to [EXAM ARCHIVE] */}
-          <div className="relative" ref={dropdownRef}>
+          {subjects.length === 0 ? (
             <button
-              onClick={() => setIsDropdownOpen((prev) => !prev)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-container hover:bg-surface-container-high border border-surface-variant text-on-surface transition-all text-left group shadow-sm"
-              title="Switch Active Subject Desk"
-              aria-label="Select Subject"
+              onClick={handleOpenAddSubject}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary transition-all text-left shadow-sm group font-title-sm text-xs"
+              title="Add your first study subject desk"
             >
-              <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />
-              <div className="flex items-baseline gap-1.5 max-w-[200px] lg:max-w-[320px] truncate">
-                <span className="font-code-sm text-xs text-primary font-bold shrink-0">
-                  {currentSubject.code}:
-                </span>
-                <span className="font-title-sm text-xs text-on-surface truncate">
-                  {currentSubject.name}
-                </span>
-              </div>
-              <ChevronDown
-                className={`w-3.5 h-3.5 text-tertiary transition-transform duration-200 ${
-                  isDropdownOpen ? 'rotate-180 text-primary' : 'group-hover:text-on-surface'
-                }`}
-              />
+              <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold">No Subject Created • Add Subject</span>
             </button>
-
-            {isDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-surface border border-surface-variant rounded-lg shadow-xl z-50 py-1 overflow-hidden">
-                <div className="px-3 py-2 border-b border-surface-variant/80 flex items-center justify-between bg-surface-container-low">
-                  <span className="font-label-stamp text-[10px] text-tertiary uppercase tracking-wider">
-                    COURSE DESK REGISTRY
+          ) : (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-container hover:bg-surface-container-high border border-surface-variant text-on-surface transition-all text-left group shadow-sm"
+                title="Switch Active Subject Desk"
+                aria-label="Select Subject"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />
+                <div className="flex items-baseline gap-1.5 max-w-[200px] lg:max-w-[320px] truncate">
+                  <span className="font-code-sm text-xs text-primary font-bold shrink-0">
+                    {currentSubject?.code || 'SUB'}:
                   </span>
-                  <span className="font-code-sm text-[10px] text-primary font-bold">
-                    {subjects.length} ACTIVE
+                  <span className="font-title-sm text-xs text-on-surface truncate">
+                    {currentSubject?.name || 'Select Subject'}
                   </span>
                 </div>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-tertiary transition-transform duration-200 ${
+                    isDropdownOpen ? 'rotate-180 text-primary' : 'group-hover:text-on-surface'
+                  }`}
+                />
+              </button>
 
-                <div className="max-h-60 overflow-y-auto py-1 space-y-0.5">
-                  {subjects.map((sub) => {
-                    const isSelected = sub.id === currentSubjectId;
-                    return (
-                      <button
-                        key={sub.id}
-                        onClick={() => {
-                          setCurrentSubjectId(sub.id);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2 text-left flex items-center justify-between transition-colors ${
-                          isSelected
-                            ? 'bg-primary/15 text-primary font-semibold'
-                            : 'hover:bg-surface-container text-on-surface'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                          <span className="px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline-variant font-code-sm text-[10px] uppercase font-bold shrink-0">
-                            {sub.code}
-                          </span>
-                          <span className="font-title-sm text-xs truncate">
-                            {sub.name}
-                          </span>
-                        </div>
-                        {isSelected && (
-                          <Check className="w-4 h-4 text-primary shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+              {isDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-surface border border-surface-variant rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-surface-variant/80 flex items-center justify-between bg-surface-container-low">
+                    <span className="font-label-stamp text-[10px] text-tertiary uppercase tracking-wider">
+                      COURSE DESK REGISTRY
+                    </span>
+                    <span className="font-code-sm text-[10px] text-primary font-bold">
+                      {subjects.length} ACTIVE
+                    </span>
+                  </div>
 
-                <div className="p-1.5 border-t border-surface-variant/80 bg-surface-container-low">
-                  <button
-                    onClick={handleOpenAddSubject}
-                    className="w-full px-3 py-2 rounded-md bg-surface-container hover:bg-surface-container-high border border-outline-variant text-primary hover:text-primary font-title-sm text-xs flex items-center justify-center gap-2 transition-all"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Add New Subject</span>
-                  </button>
+                  <div className="max-h-60 overflow-y-auto py-1 space-y-0.5">
+                    {subjects.map((sub) => {
+                      const isSelected = sub.id === currentSubjectId;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => {
+                            setCurrentSubjectId(sub.id);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 text-left flex items-center justify-between transition-colors ${
+                            isSelected
+                              ? 'bg-primary/15 text-primary font-semibold'
+                              : 'hover:bg-surface-container text-on-surface'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                            <span className="px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline-variant font-code-sm text-[10px] uppercase font-bold shrink-0">
+                              {sub.code}
+                            </span>
+                            <span className="font-title-sm text-xs truncate">
+                              {sub.name}
+                            </span>
+                          </div>
+                          {isSelected && (
+                            <Check className="w-4 h-4 text-primary shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="p-1.5 border-t border-surface-variant/80 bg-surface-container-low">
+                    <button
+                      onClick={handleOpenAddSubject}
+                      className="w-full px-3 py-2 rounded-md bg-surface-container hover:bg-surface-container-high border border-outline-variant text-primary hover:text-primary font-title-sm text-xs flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Add New Subject</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Mobile Subject Selector */}
         <div className="flex md:hidden items-center gap-2">
-          <button
-            onClick={() => setIsDropdownOpen((prev) => !prev)}
-            className="px-2.5 py-1 rounded bg-surface-container border border-surface-variant text-[11px] font-code-sm text-primary flex items-center gap-1.5 max-w-[140px] truncate"
-          >
-            <span className="font-bold truncate">{currentSubject.code}</span>
-            <ChevronDown className="w-3 h-3 shrink-0 text-tertiary" />
-          </button>
+          {subjects.length === 0 ? (
+            <button
+              onClick={handleOpenAddSubject}
+              className="px-2.5 py-1 rounded bg-primary/10 border border-primary/30 text-[11px] font-title-sm text-primary flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" />
+              <span>+ Add</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsDropdownOpen((prev) => !prev)}
+              className="px-2.5 py-1 rounded bg-surface-container border border-surface-variant text-[11px] font-code-sm text-primary flex items-center gap-1.5 max-w-[140px] truncate"
+            >
+              <span className="font-bold truncate">{currentSubject?.code || 'SUB'}</span>
+              <ChevronDown className="w-3 h-3 shrink-0 text-tertiary" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -226,10 +247,10 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Add New Subject Modal Dialog */}
+      {/* Add New Subject Modal Dialog - Fixed full-screen viewport overlay */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md bg-surface border border-surface-variant rounded-lg p-6 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-[100] w-screen h-screen flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="relative w-full max-w-md bg-surface border border-surface-variant rounded-xl p-6 shadow-2xl space-y-5 my-auto">
             <div className="flex items-center justify-between border-b border-surface-variant pb-3">
               <div className="flex items-center gap-2">
                 <span className="font-label-stamp text-xs text-primary uppercase tracking-widest">

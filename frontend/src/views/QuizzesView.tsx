@@ -11,6 +11,7 @@ import {
 
 export const QuizzesView: React.FC = () => {
   const {
+    topics,
     questions,
     quizAnswers,
     quizSubmitted,
@@ -319,19 +320,31 @@ export const QuizzesView: React.FC = () => {
           <HelpCircle className="w-10 h-10 text-primary mx-auto opacity-70" />
           <div className="space-y-1">
             <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">
-              Ready for Active Recall Drill
+              {topics.length === 0 ? 'No Study Material Uploaded' : 'Ready for Active Recall Drill'}
             </h3>
             <p className="font-body-sm text-xs text-tertiary">
-              Synthesize 4-option multiple choice questions weighted by past exam papers and topic summaries.
+              {topics.length === 0
+                ? 'Upload study material to generate quiz questions and test active recall.'
+                : 'Synthesize 4-option multiple choice questions weighted by past exam papers and topic summaries.'}
             </p>
           </div>
-          <button
-            onClick={handleLoadQuiz}
-            className="px-5 py-2.5 bg-primary text-on-primary font-title-sm text-xs rounded-md shadow-sm hover:bg-primary-container inline-flex items-center gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Generate Drill on All Topics</span>
-          </button>
+          {topics.length === 0 ? (
+            <button
+              onClick={() => setCurrentView('notes')}
+              className="px-5 py-2.5 bg-primary text-on-primary font-title-sm text-xs rounded-md shadow-sm hover:bg-primary-container inline-flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Upload Material to Generate Quiz</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleLoadQuiz}
+              className="px-5 py-2.5 bg-primary text-on-primary font-title-sm text-xs rounded-md shadow-sm hover:bg-primary-container inline-flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Generate Drill on All Topics</span>
+            </button>
+          )}
         </div>
       )}
     </div>

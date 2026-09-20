@@ -127,37 +127,22 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Bottom Desk Status & Links */}
-      <div className="p-4 border-t border-surface-variant space-y-3">
-        {/* Reading Room Desk Status */}
-        <div className="p-3 bg-surface-container rounded-md border border-surface-variant space-y-1.5">
-          <div className="flex items-center justify-between font-label-sm text-[10px] text-tertiary uppercase">
-            <span>Reading Room</span>
-            <span className="inline-flex items-center gap-1 text-secondary font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
-              ACTIVE
-            </span>
-          </div>
-          <div className="font-code-sm text-xs text-on-surface font-semibold">
-            DESK #412B // OXFORD STACK
-          </div>
-        </div>
-
-        {/* Action Links */}
-        <div className="flex items-center justify-between pt-1 text-tertiary font-label-sm text-xs">
+      {/* Bottom Actions */}
+      <div className="p-4 border-t border-surface-variant">
+        <div className="flex items-center justify-between text-tertiary font-label-sm text-xs">
           <button
             onClick={() => setCurrentView('landing')}
             className="flex items-center gap-1 hover:text-primary transition-colors"
           >
             <ExternalLink className="w-3 h-3" />
-            <span>Tripos Ledger</span>
+            <span>Landing Page</span>
           </button>
           <button
             onClick={logout}
             className="flex items-center gap-1 hover:text-error transition-colors"
           >
             <LogOut className="w-3 h-3" />
-            <span>Switch Desk</span>
+            <span>Sign Out</span>
           </button>
         </div>
       </div>
