@@ -213,15 +213,9 @@ export const LoginView: React.FC = () => {
         <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <section className="lg:col-span-7 space-y-6">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-surface-container text-on-surface font-label-sm text-[11px] uppercase tracking-wider rounded-sm">
-                Syllabus Vol. IV
+              <span className="px-2.5 py-1 bg-primary/10 border border-primary/30 text-primary font-label-sm text-xs uppercase tracking-wider rounded-sm font-semibold">
+                AI Exam Prep Agent
               </span>
-              <span className="font-label-sm text-tertiary">/</span>
-              <span className="font-label-sm text-tertiary uppercase text-xs">
-                Session: Fall Finals
-              </span>
-              <span className="font-label-sm text-tertiary">/</span>
-              <span className="font-code-sm text-xs text-primary font-medium">INDEX 09-B</span>
             </div>
 
             <h1 className="font-headline-xl text-headline-xl text-on-background tracking-tight font-normal leading-[1.08]">
@@ -231,23 +225,6 @@ export const LoginView: React.FC = () => {
             <p className="font-body-lg text-body-lg text-tertiary italic max-w-xl leading-relaxed">
               “You probably should have started three weeks ago. Regardless, we are here now.”
             </p>
-
-            <div className="bg-surface-container-low p-5 border border-surface-variant rounded-md space-y-3 max-w-lg">
-              <div className="flex items-center justify-between font-label-sm text-xs text-tertiary uppercase pb-2 border-b border-surface-variant">
-                <span>TERMINAL DISPATCH</span>
-                <span className="text-secondary font-medium">ARCHIVE // DESK-04</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 font-body-sm text-xs">
-                <div>
-                  <div className="text-tertiary">Active Vault Modules:</div>
-                  <div className="text-on-surface font-medium">DynamoDB Ledger Sync</div>
-                </div>
-                <div>
-                  <div className="text-tertiary">AI Engine Status:</div>
-                  <div className="text-secondary font-semibold font-code-sm">Active // Online</div>
-                </div>
-              </div>
-            </div>
           </section>
 
           <section className="lg:col-span-5">
@@ -325,7 +302,7 @@ export const LoginView: React.FC = () => {
       </main>
 
       <footer className="w-full px-6 md:px-12 py-4 border-t border-surface-variant text-center font-label-sm text-xs text-tertiary">
-        PanicDeck Exam Prep Agent • Oxford/Cambridge Tripos Interface Module
+        PanicDeck • AI-Powered Exam Preparation Agent
       </footer>
     </div>
   );

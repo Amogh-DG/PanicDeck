@@ -51,12 +51,6 @@ export interface SubjectData {
   uploadedFiles: UploadedFileRecord[];
 }
 
-export const DEFAULT_SUBJECT: Subject = {
-  id: 'sub_default',
-  name: 'Actuarial Mathematics',
-  code: 'ACT-201'
-};
-
 const createEmptySubjectData = (): SubjectData => ({
   topics: [],
   questions: [],
@@ -82,7 +76,7 @@ export interface StudyContextType {
   
   // Multi-subject management
   subjects: Subject[];
-  currentSubject: Subject;
+  currentSubject: Subject | null;
   currentSubjectId: string;
   setCurrentSubjectId: (id: string) => void;
   addSubject: (name: string, code: string) => Subject;
@@ -150,19 +144,19 @@ function decodeJwtPayload(token: string): Partial<UserProfile> {
 export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [currentView, setCurrentView] = useState<ViewType>('login');
+  const [currentView, setCurrentView] = useState<ViewType>('landing');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-  // Subjects state with persistence
+  // Subjects state with persistence (defaults to empty list)
   const [subjects, setSubjects] = useState<Subject[]>(() => {
     try {
       const stored = localStorage.getItem('panicdeck_subjects');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (_) {}
-    return [DEFAULT_SUBJECT];
+    return [];
   });
 
   const [currentSubjectId, setCurrentSubjectId] = useState<string>(() => {
@@ -170,7 +164,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const storedId = localStorage.getItem('panicdeck_current_subject_id');
       if (storedId) return storedId;
     } catch (_) {}
-    return DEFAULT_SUBJECT.id;
+    return '';
   });
 
   // Subject-scoped dataset map keyed by subjectId
@@ -182,9 +176,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (parsed && typeof parsed === 'object') return parsed;
       }
     } catch (_) {}
-    return {
-      [DEFAULT_SUBJECT.id]: createEmptySubjectData()
-    };
+    return {};
   });
 
   // Global state
@@ -213,13 +205,13 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [subjectDataMap]);
 
   // Derived current subject and active dataset
-  const currentSubject =
+  const currentSubject: Subject | null =
     subjects.find((s) => s.id === currentSubjectId) ||
     subjects[0] ||
-    DEFAULT_SUBJECT;
+    null;
 
   const activeData: SubjectData =
-    subjectDataMap[currentSubjectId] || createEmptySubjectData();
+    (currentSubject && subjectDataMap[currentSubject.id]) || createEmptySubjectData();
 
   const topics = activeData.topics;
   const questions = activeData.questions;

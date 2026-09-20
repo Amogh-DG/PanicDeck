@@ -16,6 +16,7 @@ import {
 
 export const OverviewView: React.FC = () => {
   const {
+    user,
     setCurrentView,
     topics,
     weakTopics,
@@ -24,6 +25,8 @@ export const OverviewView: React.FC = () => {
     scoreHistory,
     handleLoadQuiz
   } = useStudy();
+
+  const firstName = user?.name ? user.name.split(' ')[0] : '';
 
   const hasScores = scoreHistory && scoreHistory.length > 0;
   const latestScore = hasScores ? scoreHistory[0] : null;
@@ -48,29 +51,11 @@ export const OverviewView: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Archival Page Index Overline */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between border-b border-surface-variant pb-3 gap-2">
-        <div className="flex items-baseline gap-3">
-          <span className="font-label-stamp text-xs text-primary uppercase tracking-widest">
-            [FOLIO // 084]
-          </span>
-          <span className="font-label-sm text-xs text-on-surface-variant uppercase">
-            SEMESTER FINALS DESK REGISTER
-          </span>
-        </div>
-        <div className="flex items-center gap-3 text-tertiary font-label-sm text-xs">
-          <span className="inline-block w-2 h-2 rounded-full bg-secondary"></span>
-          <span>DESK STATUS: UNINTERRUPTED</span>
-          <span className="text-surface-variant">/</span>
-          <span className="font-code-sm text-on-surface">ROOM 412B</span>
-        </div>
-      </div>
-
       {/* Hero Greeting Area */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pt-2">
         <div className="space-y-1 max-w-xl">
           <h1 className="font-headline-xl text-headline-xl text-on-surface tracking-tight leading-none">
-            Good morning.
+            Good morning{firstName ? `, ${firstName}` : ''}.
           </h1>
           <p className="font-body-lg text-body-lg text-tertiary italic">
             “Let’s make the panic useful.”

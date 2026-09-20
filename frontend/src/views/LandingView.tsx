@@ -13,10 +13,14 @@ import {
 } from 'lucide-react';
 
 export const LandingView: React.FC = () => {
-  const { setCurrentView, handleUploadNotes } = useStudy();
+  const { setCurrentView, handleUploadNotes, isLoggedIn } = useStudy();
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (!isLoggedIn) {
+      setCurrentView('login');
+      return;
+    }
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleUploadNotes(e.dataTransfer.files[0]);
       setCurrentView('notes');
@@ -24,6 +28,10 @@ export const LandingView: React.FC = () => {
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isLoggedIn) {
+      setCurrentView('login');
+      return;
+    }
     if (e.target.files && e.target.files[0]) {
       handleUploadNotes(e.target.files[0]);
       setCurrentView('notes');
@@ -37,18 +45,12 @@ export const LandingView: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-2 font-label-code text-label-code">
           <div className="flex items-center gap-3">
             <span className="font-bold text-primary tracking-widest uppercase">
-              DOCKET REF: PD-ENG-2025
+              PANICDECK AI
             </span>
             <span className="text-outline-variant">/</span>
-            <span className="text-tertiary">FORM 14-B</span>
-            <span className="text-outline-variant">/</span>
-            <span className="text-secondary font-medium">EMERGENCY DIRECTIVE</span>
+            <span className="text-tertiary">EXAM PREP AGENT</span>
           </div>
           <div className="flex items-center gap-4 text-xs">
-            <span className="inline-flex items-center gap-1.5 text-error font-semibold">
-              <span className="w-2 h-2 rounded-full bg-error animate-ping"></span>
-              TRIPOS FINALS COUNTDOWN: 34H : 11M : 49S
-            </span>
             <button
               onClick={() => setCurrentView('login')}
               className="text-primary hover:underline font-semibold"
@@ -81,14 +83,14 @@ export const LandingView: React.FC = () => {
 
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <button
-                onClick={() => setCurrentView('overview')}
+                onClick={() => setCurrentView(isLoggedIn ? 'overview' : 'login')}
                 className="px-6 py-3.5 bg-inverse-surface text-inverse-on-surface font-title-sm text-sm rounded-md shadow-archival hover:translate-y-[-2px] transition-all flex items-center gap-2"
               >
-                <span>Enter Study Terminal</span>
+                <span>{isLoggedIn ? 'Enter Study Terminal' : 'Sign In to Desk'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button
-                onClick={() => setCurrentView('notes')}
+                onClick={() => setCurrentView(isLoggedIn ? 'notes' : 'login')}
                 className="px-6 py-3.5 bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface font-title-sm text-sm rounded-md transition-all"
               >
                 Upload Course Notes
@@ -96,44 +98,54 @@ export const LandingView: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column: Emergency Intake Chute */}
+          {/* Right Column: Platform Capabilities Card */}
           <div className="lg:col-span-5">
-            <div
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={handleFileDrop}
-              className="p-8 border-2 border-primary bg-surface-container-lowest rounded-md shadow-archival relative space-y-5 text-center"
-            >
-              <div className="absolute -top-3.5 -right-3 bg-secondary text-on-secondary px-3 py-1 font-label-stamp text-[10px] uppercase font-bold tracking-widest shadow-sm rounded-sm">
-                CONFIDENTIAL INTAKE
+            <div className="p-8 border border-surface-variant bg-surface-container rounded-xl shadow-xl space-y-6">
+              <div className="flex items-center justify-between border-b border-surface-variant pb-4">
+                <div className="flex items-center gap-2">
+                  <BrainCircuit className="w-5 h-5 text-primary" />
+                  <span className="font-title-sm text-sm font-semibold text-on-surface">
+                    Multimodal Exam Pipeline
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-code-sm text-[10px] font-bold">
+                  AI POWERED
+                </span>
               </div>
 
-              <div className="w-14 h-14 mx-auto rounded-full bg-primary-container/15 flex items-center justify-center text-primary">
-                <Upload className="w-7 h-7" />
+              <div className="space-y-4 font-body-sm text-xs text-tertiary">
+                <div className="p-3.5 bg-surface-container-low rounded-lg border border-surface-variant/80 flex items-start gap-3">
+                  <FileText className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-on-surface font-medium">Lecture Notes & Slide Ingest</div>
+                    <div className="text-[11px] mt-0.5">Extracts core theorems, math derivations, and definitions into structured study modules.</div>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-surface-container-low rounded-lg border border-surface-variant/80 flex items-start gap-3">
+                  <CheckCircle2 className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-on-surface font-medium">Active Recall & Quiz Engine</div>
+                    <div className="text-[11px] mt-0.5">Tests retention with 4-option MCQs and tracks topic-by-topic accuracy breakdowns.</div>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-surface-container-low rounded-lg border border-surface-variant/80 flex items-start gap-3">
+                  <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-on-surface font-medium">Syllabus Gap & Exam Weighting</div>
+                    <div className="text-[11px] mt-0.5">Cross-references official specs against past papers so you focus on high-yield exam topics.</div>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <h3 className="font-headline-md text-headline-md text-on-surface">
-                  Commit Notes to Chute
-                </h3>
-                <p className="font-body-sm text-body-sm text-tertiary">
-                  Drop PDF lecture slides, handwritten camera rolls, or syllabus files (up to 4.5 MB).
-                </p>
-              </div>
-
-              <label className="inline-block px-5 py-2.5 bg-primary text-on-primary font-title-sm text-xs uppercase tracking-wider rounded-md cursor-pointer hover:bg-primary-container transition-all">
-                <span>Select Files from Machine</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileInput}
-                  accept=".pdf,.png,.jpg,.jpeg,.txt"
-                />
-              </label>
-
-              <div className="pt-2 border-t border-outline-variant font-code-sm text-[11px] text-tertiary flex items-center justify-between">
-                <span>OCR Pipeline: Active</span>
-                <span>Bedrock 3.7: Standby</span>
-              </div>
+              <button
+                onClick={() => setCurrentView(isLoggedIn ? 'overview' : 'login')}
+                className="w-full py-3 bg-primary text-on-primary font-title-sm text-xs rounded-lg shadow-sm hover:bg-primary-container flex items-center justify-center gap-2 font-semibold transition-all"
+              >
+                <span>{isLoggedIn ? 'Go to Study Dashboard' : 'Get Started with Google'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
