@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   TopicSummary,
   QuizQuestion,
@@ -7,7 +7,8 @@ import {
   WeightedTopic,
   UserProfile,
   FileItem,
-  StoredQuizScore
+  StoredQuizScore,
+  TopicAccuracyBreakdown
 } from '../api/types';
 import { api } from '../api/client';
 
@@ -21,6 +22,12 @@ export type ViewType =
   | 'coverage'
   | 'past_papers';
 
+export interface Subject {
+  id: string;
+  name: string;
+  code: string;
+}
+
 export interface UploadedFileRecord {
   id: string;
   name: string;
@@ -31,7 +38,33 @@ export interface UploadedFileRecord {
   status: 'processing' | 'ready' | 'error';
 }
 
-interface StudyContextType {
+export interface SubjectData {
+  topics: TopicSummary[];
+  questions: QuizQuestion[];
+  quizAnswers: Record<string, number>;
+  quizSubmitted: boolean;
+  quizScore: { correct: number; total: number } | null;
+  topicBreakdown: TopicAccuracyBreakdown[];
+  weakTopics: WeakTopic[];
+  coverageGaps: CoverageGap[];
+  weightedTopics: WeightedTopic[];
+  uploadedFiles: UploadedFileRecord[];
+}
+
+const createEmptySubjectData = (): SubjectData => ({
+  topics: [],
+  questions: [],
+  quizAnswers: {},
+  quizSubmitted: false,
+  quizScore: null,
+  topicBreakdown: [],
+  weakTopics: [],
+  coverageGaps: [],
+  weightedTopics: [],
+  uploadedFiles: []
+});
+
+export interface StudyContextType {
   currentView: ViewType;
   setCurrentView: (view: ViewType) => void;
   isLoggedIn: boolean;
@@ -41,24 +74,36 @@ interface StudyContextType {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   
+  // Multi-subject management
+  subjects: Subject[];
+  currentSubject: Subject | null;
+  currentSubjectId: string;
+  setCurrentSubjectId: (id: string) => void;
+  addSubject: (name: string, code: string) => Subject;
+
+  // Active Subject Scoped State
   topics: TopicSummary[];
   questions: QuizQuestion[];
   quizAnswers: Record<string, number>;
   quizSubmitted: boolean;
   quizScore: { correct: number; total: number } | null;
+  topicBreakdown: TopicAccuracyBreakdown[];
   weakTopics: WeakTopic[];
   coverageGaps: CoverageGap[];
   weightedTopics: WeightedTopic[];
   uploadedFiles: UploadedFileRecord[];
-  scoreHistory: StoredQuizScore[];
 
+  // Global Cross-Subject State
+  scoreHistory: StoredQuizScore[];
   isLoading: boolean;
   loadingStep: string;
   error: string | null;
   clearError: () => void;
 
+  // Actions & Handlers
   handleUploadNotes: (file: File) => Promise<void>;
   handleLoadQuiz: () => Promise<void>;
+  handleLoadTopicQuiz: (topicId: string) => Promise<void>;
   handleAnswerQuestion: (questionId: string, optionIndex: number) => void;
   handleSubmitQuiz: () => Promise<void>;
   handleResetQuiz: () => void;
@@ -99,23 +144,111 @@ function decodeJwtPayload(token: string): Partial<UserProfile> {
 export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [currentView, setCurrentView] = useState<ViewType>('login');
+  const [currentView, setCurrentView] = useState<ViewType>('landing');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-  const [topics, setTopics] = useState<TopicSummary[]>([]);
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
-  const [quizSubmitted, setQuizSubmitted] = useState<boolean>(false);
-  const [quizScore, setQuizScore] = useState<{ correct: number; total: number } | null>(null);
-  const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([]);
-  const [coverageGaps, setCoverageGaps] = useState<CoverageGap[]>([]);
-  const [weightedTopics, setWeightedTopics] = useState<WeightedTopic[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFileRecord[]>([]);
-  const [scoreHistory, setScoreHistory] = useState<StoredQuizScore[]>([]);
+  // Subjects state with persistence (defaults to empty list)
+  const [subjects, setSubjects] = useState<Subject[]>(() => {
+    try {
+      const stored = localStorage.getItem('panicdeck_subjects');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (_) {}
+    return [];
+  });
 
+  const [currentSubjectId, setCurrentSubjectId] = useState<string>(() => {
+    try {
+      const storedId = localStorage.getItem('panicdeck_current_subject_id');
+      if (storedId) return storedId;
+    } catch (_) {}
+    return '';
+  });
+
+  // Subject-scoped dataset map keyed by subjectId
+  const [subjectDataMap, setSubjectDataMap] = useState<Record<string, SubjectData>>(() => {
+    try {
+      const stored = localStorage.getItem('panicdeck_subject_data');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch (_) {}
+    return {};
+  });
+
+  // Global state
+  const [scoreHistory, setScoreHistory] = useState<StoredQuizScore[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+
+  // Sync state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('panicdeck_subjects', JSON.stringify(subjects));
+    } catch (_) {}
+  }, [subjects]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('panicdeck_current_subject_id', currentSubjectId);
+    } catch (_) {}
+  }, [currentSubjectId]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('panicdeck_subject_data', JSON.stringify(subjectDataMap));
+    } catch (_) {}
+  }, [subjectDataMap]);
+
+  // Derived current subject and active dataset
+  const currentSubject: Subject | null =
+    subjects.find((s) => s.id === currentSubjectId) ||
+    subjects[0] ||
+    null;
+
+  const activeData: SubjectData =
+    (currentSubject && subjectDataMap[currentSubject.id]) || createEmptySubjectData();
+
+  const topics = activeData.topics;
+  const questions = activeData.questions;
+  const quizAnswers = activeData.quizAnswers;
+  const quizSubmitted = activeData.quizSubmitted;
+  const quizScore = activeData.quizScore;
+  const topicBreakdown = activeData.topicBreakdown || [];
+  const weakTopics = activeData.weakTopics;
+  const coverageGaps = activeData.coverageGaps;
+  const weightedTopics = activeData.weightedTopics;
+  const uploadedFiles = activeData.uploadedFiles;
+
+  // Helper to update subject data by specific subject ID
+  const updateSubjectDataById = useCallback(
+    (subjectId: string, updater: (prev: SubjectData) => Partial<SubjectData>) => {
+      setSubjectDataMap((prevMap) => {
+        const cur = prevMap[subjectId] || createEmptySubjectData();
+        const updatedFields = updater(cur);
+        return {
+          ...prevMap,
+          [subjectId]: {
+            ...cur,
+            ...updatedFields
+          }
+        };
+      });
+    },
+    []
+  );
+
+  // Helper to update currently active subject data
+  const updateCurrentSubjectData = useCallback(
+    (updater: (prev: SubjectData) => Partial<SubjectData>) => {
+      updateSubjectDataById(currentSubjectId, updater);
+    },
+    [currentSubjectId, updateSubjectDataById]
+  );
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -132,6 +265,24 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const clearError = () => setError(null);
+
+  const addSubject = (name: string, code: string): Subject => {
+    const trimmedName = name.trim() || 'Untitled Subject';
+    const trimmedCode = (code.trim() || 'SUB').toUpperCase();
+    const newSubject: Subject = {
+      id: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: trimmedName,
+      code: trimmedCode
+    };
+
+    setSubjects((prev) => [...prev, newSubject]);
+    setSubjectDataMap((prev) => ({
+      ...prev,
+      [newSubject.id]: createEmptySubjectData()
+    }));
+    setCurrentSubjectId(newSubject.id);
+    return newSubject;
+  };
 
   const loginWithGoogle = (credential: string, customProfile?: Partial<UserProfile>) => {
     const decoded = decodeJwtPayload(credential);
@@ -178,7 +329,9 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
           status: 'ready'
         }));
-        setUploadedFiles(mapped);
+        updateCurrentSubjectData(() => ({
+          uploadedFiles: mapped
+        }));
       }
     } catch (_) {}
   };
@@ -200,6 +353,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [isLoggedIn]);
 
   const handleUploadNotes = async (file: File) => {
+    const targetSubId = currentSubjectId;
     setIsLoading(true);
     setError(null);
     try {
@@ -215,7 +369,10 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
         status: 'processing'
       };
-      setUploadedFiles((prev) => [newRecord, ...prev]);
+
+      updateSubjectDataById(targetSubId, (prev) => ({
+        uploadedFiles: [newRecord, ...prev.uploadedFiles]
+      }));
 
       setLoadingStep('Extracting OCR & text streams via Bedrock AI...');
       await new Promise((r) => setTimeout(r, 600));
@@ -224,14 +381,20 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const ext = file.name.split('.').pop()?.toLowerCase();
       const fileType = ext === 'pdf' ? 'pdf' : ext === 'txt' ? 'text' : 'image';
 
-      const res = await api.summarize({ s3_key, file_type: fileType });
+      // Attach subject_id: currentSubjectId to the summarize API call
+      const res = await api.summarize({
+        s3_key,
+        file_type: fileType,
+        subject_id: targetSubId
+      });
+
       if (res.status === 'success') {
-        setTopics(res.topics);
-        setUploadedFiles((prev) =>
-          prev.map((item) =>
+        updateSubjectDataById(targetSubId, (prev) => ({
+          topics: res.topics,
+          uploadedFiles: prev.uploadedFiles.map((item) =>
             item.id === newRecord.id ? { ...item, status: 'ready' } : item
           )
-        );
+        }));
       }
     } catch (e: any) {
       setError(e.message || 'Failed to process notes');
@@ -242,19 +405,24 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const handleLoadQuiz = async () => {
+    const targetSubId = currentSubjectId;
+    const currentData = subjectDataMap[targetSubId] || createEmptySubjectData();
     setIsLoading(true);
     setError(null);
     try {
       setLoadingStep('Weighting questions by past paper frequencies...');
       const res = await api.generateQuiz({
-        topics,
-        weighted_topics: weightedTopics
+        topics: currentData.topics,
+        weighted_topics: currentData.weightedTopics
       });
       if (res.status === 'success') {
-        setQuestions(res.questions);
-        setQuizAnswers({});
-        setQuizSubmitted(false);
-        setQuizScore(null);
+        updateSubjectDataById(targetSubId, () => ({
+          questions: res.questions,
+          quizAnswers: {},
+          quizSubmitted: false,
+          quizScore: null,
+          topicBreakdown: []
+        }));
       }
     } catch (e: any) {
       setError(e.message || 'Failed to generate quiz');
@@ -264,22 +432,66 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const handleLoadTopicQuiz = async (topicId: string) => {
+    const targetSubId = currentSubjectId;
+    const currentData = subjectDataMap[targetSubId] || createEmptySubjectData();
+    setIsLoading(true);
+    setError(null);
+    try {
+      setLoadingStep('Generating focused recall drill for topic...');
+      const targetTopic = currentData.topics.find((t) => t.topic_id === topicId) || {
+        topic_id: topicId,
+        name: currentData.weakTopics.find((w) => w.topic_id === topicId)?.name || `Topic ${topicId}`,
+        summary: `Targeted active recall practice on topic ${topicId}.`
+      };
+
+      const matchingWeighted = currentData.weightedTopics.filter(
+        (w) => w.topic_id === topicId || w.name.toLowerCase() === targetTopic.name.toLowerCase()
+      );
+
+      const res = await api.generateQuiz({
+        topics: [targetTopic],
+        weighted_topics: matchingWeighted.length > 0 ? matchingWeighted : undefined
+      });
+
+      if (res.status === 'success') {
+        updateSubjectDataById(targetSubId, () => ({
+          questions: res.questions,
+          quizAnswers: {},
+          quizSubmitted: false,
+          quizScore: null,
+          topicBreakdown: []
+        }));
+      }
+    } catch (e: any) {
+      setError(e.message || 'Failed to generate topic quiz');
+    } finally {
+      setIsLoading(false);
+      setLoadingStep('');
+    }
+  };
+
   const handleAnswerQuestion = (questionId: string, optionIndex: number) => {
-    if (quizSubmitted) return;
-    setQuizAnswers((prev) => ({
-      ...prev,
-      [questionId]: optionIndex
+    const currentData = subjectDataMap[currentSubjectId] || createEmptySubjectData();
+    if (currentData.quizSubmitted) return;
+    updateCurrentSubjectData((prev) => ({
+      quizAnswers: {
+        ...prev.quizAnswers,
+        [questionId]: optionIndex
+      }
     }));
   };
 
   const handleSubmitQuiz = async () => {
+    const targetSubId = currentSubjectId;
+    const currentData = subjectDataMap[targetSubId] || createEmptySubjectData();
     setIsLoading(true);
     setError(null);
     try {
       setLoadingStep('Grading recall responses & ranking weak topics...');
       let correctCount = 0;
-      const submissionList = questions.map((q) => {
-        const selected = quizAnswers[q.id];
+      const submissionList = currentData.questions.map((q) => {
+        const selected = currentData.quizAnswers[q.id];
         const isCorrect = selected === q.correct_answer_index;
         if (isCorrect) correctCount++;
         return {
@@ -289,15 +501,22 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
       });
 
-      setQuizScore({ correct: correctCount, total: questions.length });
-      setQuizSubmitted(true);
+      const calculatedScore = { correct: correctCount, total: currentData.questions.length };
+      updateSubjectDataById(targetSubId, () => ({
+        quizScore: calculatedScore,
+        quizSubmitted: true
+      }));
 
       const weakRes = await api.getWeakTopics({
         answers: submissionList,
-        topics: topics.map((t) => ({ topic_id: t.topic_id, name: t.name }))
+        topics: currentData.topics.map((t) => ({ topic_id: t.topic_id, name: t.name }))
       });
+
       if (weakRes.status === 'success') {
-        setWeakTopics(weakRes.weak_topics);
+        updateSubjectDataById(targetSubId, () => ({
+          weakTopics: weakRes.weak_topics || [],
+          topicBreakdown: weakRes.topic_breakdown || []
+        }));
       }
       await refreshScores();
     } catch (e: any) {
@@ -309,12 +528,18 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const handleResetQuiz = () => {
-    setQuizAnswers({});
-    setQuizSubmitted(false);
-    setQuizScore(null);
+    updateCurrentSubjectData(() => ({
+      quizAnswers: {},
+      quizSubmitted: false,
+      quizScore: null,
+      topicBreakdown: []
+    }));
   };
 
   const handleUploadSyllabus = async (file: File) => {
+    const targetSubId = currentSubjectId;
+    const currentData = subjectDataMap[targetSubId] || createEmptySubjectData();
+    const currentSubjectObj = subjects.find((s) => s.id === targetSubId) || DEFAULT_SUBJECT;
     setIsLoading(true);
     setError(null);
     try {
@@ -324,10 +549,13 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setLoadingStep('Auditing syllabus requirements against uploaded notes...');
       const res = await api.getCoverageGaps({
         syllabus_s3_key: s3_key,
-        topics
+        topics: currentData.topics,
+        subject_code: currentSubjectObj.code
       });
       if (res.status === 'success') {
-        setCoverageGaps(res.gaps);
+        updateSubjectDataById(targetSubId, () => ({
+          coverageGaps: res.gaps
+        }));
       }
     } catch (e: any) {
       setError(e.message || 'Failed to audit syllabus gaps');
@@ -338,6 +566,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const handleUploadPastPapers = async (files: File[]) => {
+    const targetSubId = currentSubjectId;
     setIsLoading(true);
     setError(null);
     try {
@@ -351,7 +580,9 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setLoadingStep('Scanning historical exam questions (2018–2024)...');
       const res = await api.getPastPaperWeighting({ s3_keys: s3Keys });
       if (res.status === 'success') {
-        setWeightedTopics(res.weighted_topics);
+        updateSubjectDataById(targetSubId, () => ({
+          weightedTopics: res.weighted_topics
+        }));
       }
     } catch (e: any) {
       setError(e.message || 'Failed to analyze past papers');
@@ -372,11 +603,17 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logout,
         theme,
         toggleTheme,
+        subjects,
+        currentSubject,
+        currentSubjectId,
+        setCurrentSubjectId,
+        addSubject,
         topics,
         questions,
         quizAnswers,
         quizSubmitted,
         quizScore,
+        topicBreakdown,
         weakTopics,
         coverageGaps,
         weightedTopics,
@@ -388,6 +625,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         clearError,
         handleUploadNotes,
         handleLoadQuiz,
+        handleLoadTopicQuiz,
         handleAnswerQuestion,
         handleSubmitQuiz,
         handleResetQuiz,

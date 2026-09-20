@@ -194,11 +194,11 @@ export const NotesView: React.FC = () => {
               <div className="pt-4 border-t border-surface-variant/80 flex flex-wrap items-center justify-between gap-4 font-code-sm text-xs text-tertiary">
                 <div className="flex items-center gap-2">
                   <Bookmark className="w-3.5 h-3.5 text-primary" />
-                  <span>Citations: Tripos Syllabus 2024 • Section 4.2</span>
+                  <span>Synthesized from Uploaded Lecture Vault</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                  <span>Confidence: 98.4%</span>
+                  <span>AI Model Active</span>
                 </div>
               </div>
             </div>
