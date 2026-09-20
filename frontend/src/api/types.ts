@@ -22,6 +22,7 @@ export type FileType = 'pdf' | 'image' | 'text';
 export interface SummarizeRequest {
   s3_key: string;
   file_type: FileType;
+  subject_id?: string;
 }
 
 export interface TopicSummary {

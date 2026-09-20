@@ -13,7 +13,7 @@ import {
 import { Severity } from '../api/types';
 
 export const WeakTopicsView: React.FC = () => {
-  const { weakTopics, handleLoadQuiz, setCurrentView } = useStudy();
+  const { weakTopics, handleLoadQuiz, handleLoadTopicQuiz, setCurrentView } = useStudy();
 
   const getSeverityBadge = (sev: Severity) => {
     switch (sev) {
@@ -42,6 +42,11 @@ export const WeakTopicsView: React.FC = () => {
 
   const handleLaunchTargetedDrill = async () => {
     await handleLoadQuiz();
+    setCurrentView('quizzes');
+  };
+
+  const handleDrillTopic = async (topicId: string) => {
+    await handleLoadTopicQuiz(topicId);
     setCurrentView('quizzes');
   };
 
@@ -131,7 +136,7 @@ export const WeakTopicsView: React.FC = () => {
                     <span>Review Notes</span>
                   </button>
                   <button
-                    onClick={handleLaunchTargetedDrill}
+                    onClick={() => handleDrillTopic(topic.topic_id)}
                     className="px-3 py-1.5 bg-inverse-surface hover:bg-inverse-surface/90 text-inverse-on-surface rounded font-title-sm flex items-center gap-1.5"
                   >
                     <span>Drill Concept</span>

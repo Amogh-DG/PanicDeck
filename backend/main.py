@@ -149,6 +149,7 @@ class UploadUrlRequest(BaseModel):
 class SummarizeRequest(BaseModel):
     s3_key: str
     file_type: str
+    subject_id: Optional[str] = None
 
 class TopicItem(BaseModel):
     topic_id: str
