@@ -539,7 +539,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleUploadSyllabus = async (file: File) => {
     const targetSubId = currentSubjectId;
     const currentData = subjectDataMap[targetSubId] || createEmptySubjectData();
-    const currentSubjectObj = subjects.find((s) => s.id === targetSubId) || DEFAULT_SUBJECT;
+    const currentSubjectObj = subjects.find((s) => s.id === targetSubId);
     setIsLoading(true);
     setError(null);
     try {
@@ -550,7 +550,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const res = await api.getCoverageGaps({
         syllabus_s3_key: s3_key,
         topics: currentData.topics,
-        subject_code: currentSubjectObj.code
+        subject_code: currentSubjectObj?.code || 'SUB'
       });
       if (res.status === 'success') {
         updateSubjectDataById(targetSubId, () => ({
