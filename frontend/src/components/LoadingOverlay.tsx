@@ -27,7 +27,7 @@ export const LoadingOverlay: React.FC = () => {
               Processing Examination Docket
             </div>
             <div className="font-body-sm text-tertiary">
-              {loadingStep || 'Executing Bedrock model calculations...'}
+              {loadingStep || 'Analyzing examination materials...'}
             </div>
           </div>
         </div>
@@ -36,11 +36,11 @@ export const LoadingOverlay: React.FC = () => {
         <div className="pt-2 border-t border-surface-variant/60 grid grid-cols-3 gap-2 text-center font-code-sm text-[10px] text-tertiary">
           <div className="p-1.5 bg-surface-container rounded-sm flex items-center justify-center gap-1">
             <CheckCircle2 className="w-3 h-3 text-secondary" />
-            <span>S3 Ingest</span>
+            <span>Upload</span>
           </div>
           <div className="p-1.5 bg-surface-container rounded-sm flex items-center justify-center gap-1">
             <BrainCircuit className="w-3 h-3 text-primary animate-pulse" />
-            <span>Bedrock OCR</span>
+            <span>OCR & Parse</span>
           </div>
           <div className="p-1.5 bg-surface-container rounded-sm flex items-center justify-center gap-1 opacity-60">
             <span>Synthesis</span>

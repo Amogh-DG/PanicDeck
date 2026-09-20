@@ -12,8 +12,7 @@ import {
 } from 'lucide-react';
 
 export const CoverageView: React.FC = () => {
-  const { coverageGaps, handleUploadSyllabus, setCurrentView, topics } = useStudy();
-  const [synthesized, setSynthesized] = useState<Record<string, boolean>>({});
+  const { coverageGaps, handleUploadSyllabus, handleSynthesizeGap, setCurrentView, topics } = useStudy();
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -21,8 +20,8 @@ export const CoverageView: React.FC = () => {
     }
   };
 
-  const handleSynthesize = (gapName: string) => {
-    setSynthesized((prev) => ({ ...prev, [gapName]: true }));
+  const handleSynthesize = (gapName: string, reason?: string) => {
+    handleSynthesizeGap(gapName, reason);
   };
 
   return (
@@ -99,13 +98,11 @@ export const CoverageView: React.FC = () => {
         </div>
 
         {coverageGaps.length > 0 ? (
-          coverageGaps.map((gap, idx) => {
-            const isDone = synthesized[gap.name];
-            return (
-              <div
-                key={idx}
-                className="p-5 bg-surface-container border border-surface-variant rounded-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm hover:border-outline-variant transition-all"
-              >
+          coverageGaps.map((gap, idx) => (
+            <div
+              key={idx}
+              className="p-5 bg-surface-container border border-surface-variant rounded-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm hover:border-outline-variant transition-all"
+            >
                 <div className="flex items-start gap-3 min-w-0">
                   <AlertCircle className="w-5 h-5 text-error shrink-0 mt-0.5" />
                   <div className="space-y-1 min-w-0">
@@ -119,24 +116,17 @@ export const CoverageView: React.FC = () => {
                 </div>
 
                 <div className="shrink-0 flex items-center gap-3">
-                  {isDone ? (
-                    <span className="font-code-sm text-xs text-secondary flex items-center gap-1 font-bold">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Synthesized into Notes
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleSynthesize(gap.name)}
-                      className="px-4 py-2 bg-secondary text-on-secondary font-title-sm text-xs rounded-md shadow-sm hover:bg-secondary-container hover:text-on-secondary-container flex items-center gap-2 transition-all"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Auto-Synthesize Missing Proof</span>
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleSynthesize(gap.name, gap.reason)}
+                    className="px-4 py-2 bg-secondary text-on-secondary font-title-sm text-xs rounded-md shadow-sm hover:bg-secondary-container hover:text-on-secondary-container flex items-center gap-2 transition-all"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Auto-Synthesize Missing Proof</span>
+                  </button>
                 </div>
               </div>
-            );
-          })
+            )
+          )
         ) : (
           <div className="p-10 bg-surface-container border border-surface-variant rounded-md text-center space-y-4 max-w-xl mx-auto shadow-sm">
             <PieChart className="w-10 h-10 text-primary mx-auto opacity-70" />

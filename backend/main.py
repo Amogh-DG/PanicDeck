@@ -48,6 +48,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def handle_api_gateway_prefixes(request: Request, call_next):
+    # Automatically strip stage/function prefixes if routed via API Gateway
+    path = request.scope.get("path", "")
+    prefixes = ["/default/panicdeck-backend", "/panicdeck-backend", "/default"]
+    for prefix in prefixes:
+        if path.startswith(prefix) and len(path) > len(prefix) and path[len(prefix)] == "/":
+            request.scope["path"] = path[len(prefix):]
+            break
+        elif path == prefix:
+            request.scope["path"] = "/"
+            break
+    response = await call_next(request)
+    return response
+
 # DynamoDB Configuration
 DYNAMODB_SCORES_TABLE = os.environ.get("DYNAMODB_SCORES_TABLE", "PanicDeck-Scores")
 DYNAMODB_FILES_TABLE = os.environ.get("DYNAMODB_FILES_TABLE", "PanicDeck-Files")
@@ -786,6 +801,17 @@ def coverage_gaps(req: CoverageGapsRequest):
     if syllabus_file.exists():
         with open(syllabus_file, "rb") as f:
             raw_bytes = f.read()
+    else:
+        s3_bucket = os.environ.get("S3_BUCKET")
+        aws_region = os.environ.get("AWS_REGION", "ap-south-1")
+        if s3_bucket:
+            try:
+                import boto3
+                s3_client = boto3.client("s3", region_name=aws_region)
+                s3_obj = s3_client.get_object(Bucket=s3_bucket, Key=req.syllabus_s3_key)
+                raw_bytes = s3_obj["Body"].read()
+            except Exception as s3_get_err:
+                print(f"[S3 Get Syllabus Notice]: {s3_get_err}")
 
     file_name = req.syllabus_s3_key.split("/")[-1]
     ext = file_name.split(".")[-1].lower() if "." in file_name else ""
@@ -874,12 +900,25 @@ def past_paper_weighting(req: PastPaperWeightingRequest):
     if os.environ.get("GEMINI_API_KEY"):
         try:
             parts = []
+            s3_bucket = os.environ.get("S3_BUCKET")
+            aws_region = os.environ.get("AWS_REGION", "ap-south-1")
             for k in req.s3_keys[:5]:
                 p = UPLOADS_DIR / k
+                b = None
                 if p.exists():
                     with open(p, "rb") as f:
                         b = f.read()
-                    f_name = p.name
+                elif s3_bucket:
+                    try:
+                        import boto3
+                        s3_client = boto3.client("s3", region_name=aws_region)
+                        s3_obj = s3_client.get_object(Bucket=s3_bucket, Key=k)
+                        b = s3_obj["Body"].read()
+                    except Exception as s3_get_err:
+                        print(f"[S3 Get Past Paper Notice]: {s3_get_err}")
+
+                if b:
+                    f_name = k.split("/")[-1]
                     ext = f_name.split(".")[-1].lower() if "." in f_name else ""
                     if ext == "pdf":
                         parts.append({

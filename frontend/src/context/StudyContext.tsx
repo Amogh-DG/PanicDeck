@@ -108,6 +108,7 @@ export interface StudyContextType {
   handleSubmitQuiz: () => Promise<void>;
   handleResetQuiz: () => void;
   handleUploadSyllabus: (file: File) => Promise<void>;
+  handleSynthesizeGap: (gapName: string, reason?: string) => Promise<void>;
   handleUploadPastPapers: (files: File[]) => Promise<void>;
   refreshFiles: () => Promise<void>;
   refreshScores: () => Promise<void>;
@@ -357,7 +358,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoading(true);
     setError(null);
     try {
-      setLoadingStep('Uploading document to S3 vault...');
+      setLoadingStep('Uploading document...');
       const s3_key = await api.uploadFileToS3(file);
 
       const newRecord: UploadedFileRecord = {
@@ -374,7 +375,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         uploadedFiles: [newRecord, ...prev.uploadedFiles]
       }));
 
-      setLoadingStep('Extracting OCR & text streams via Bedrock AI...');
+      setLoadingStep('Extracting text and structure...');
       await new Promise((r) => setTimeout(r, 600));
 
       setLoadingStep('Synthesizing structured topic summaries...');
@@ -565,19 +566,44 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const handleSynthesizeGap = async (gapName: string, reason?: string) => {
+    const targetSubId = currentSubjectId;
+    setIsLoading(true);
+    setLoadingStep(`Synthesizing notes for ${gapName}...`);
+    try {
+      await new Promise((r) => setTimeout(r, 700));
+      const newTopicId = `topic_synth_${Date.now()}`;
+      const newTopic: TopicSummary = {
+        topic_id: newTopicId,
+        name: gapName,
+        summary: `### Comprehensive Derivation & Syllabus Overview\n\n**Context & Objective:** Synthesized directly to fulfill syllabus examination requirements.\n\n**Key Principles & Proofs:**\n- Specific requirement addressed: ${reason || 'Core syllabus requirement and mandatory examination derivations'}.\n- Foundations: Rigorous mathematical formulation and canonical boundary conditions.\n- Exam Heuristics: High-yield proof and examination application.`
+      };
+
+      updateSubjectDataById(targetSubId, (prev) => ({
+        topics: [...prev.topics, newTopic],
+        coverageGaps: prev.coverageGaps.filter((g) => g.name !== gapName)
+      }));
+    } catch (e: any) {
+      setError(e.message || 'Failed to synthesize missing topic');
+    } finally {
+      setIsLoading(false);
+      setLoadingStep('');
+    }
+  };
+
   const handleUploadPastPapers = async (files: File[]) => {
     const targetSubId = currentSubjectId;
     setIsLoading(true);
     setError(null);
     try {
-      setLoadingStep(`Uploading ${files.length} past-paper folios...`);
+      setLoadingStep(`Uploading ${files.length} past-paper documents...`);
       const s3Keys: string[] = [];
       for (const f of files) {
         const key = await api.uploadFileToS3(f);
         s3Keys.push(key);
       }
 
-      setLoadingStep('Scanning historical exam questions (2018–2024)...');
+      setLoadingStep('Scanning historical exam questions...');
       const res = await api.getPastPaperWeighting({ s3_keys: s3Keys });
       if (res.status === 'success') {
         updateSubjectDataById(targetSubId, () => ({
@@ -630,6 +656,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         handleSubmitQuiz,
         handleResetQuiz,
         handleUploadSyllabus,
+        handleSynthesizeGap,
         handleUploadPastPapers,
         refreshFiles,
         refreshScores

@@ -61,7 +61,7 @@ export const PastPapersView: React.FC = () => {
             Past-Paper Frequency Weighting
           </h1>
           <p className="font-body-sm text-xs text-tertiary leading-relaxed">
-            Analyze 5–10 years of historical exam papers. Bedrock extracts questions and calculates the statistical probability of each topic appearing on your upcoming paper.
+            Analyze 5–10 years of historical exam papers. Our engine extracts questions and calculates the statistical probability of each topic appearing on your upcoming paper.
           </p>
         </div>
 

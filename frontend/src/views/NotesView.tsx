@@ -88,7 +88,7 @@ export const NotesView: React.FC = () => {
               Drop lecture slides, PDF notes, or scrawls to parse
             </div>
             <div className="font-body-sm text-xs text-tertiary">
-              Bedrock AI performs OCR, LaTeX structuring, and topic-by-topic synthesis.
+              Intelligent OCR, LaTeX structuring, and topic-by-topic synthesis.
             </div>
           </div>
         </div>
