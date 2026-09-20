@@ -80,13 +80,14 @@ class ApiClient {
   }
 
   async uploadFileToS3(file: File, onProgress?: (percent: number) => void): Promise<string> {
-    const uploadMeta = await this.getUploadUrl(file.name, file.type || 'application/pdf');
+    const contentType = file.type || 'application/pdf';
+    const uploadMeta = await this.getUploadUrl(file.name, contentType);
 
     if (uploadMeta.upload_url) {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadMeta.upload_url, true);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.setRequestHeader('Content-Type', contentType);
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable && onProgress) {
