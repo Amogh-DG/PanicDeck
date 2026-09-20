@@ -855,4 +855,8 @@ def past_paper_weighting(req: PastPaperWeightingRequest):
             "weight": "low"
         }
     ]
-    return {"status": "success", "weighted_topics": weighted_topics}
+try:
+    from mangum import Mangum
+    handler = Mangum(app)
+except ImportError:
+    pass
